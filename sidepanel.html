@@ -78,6 +78,56 @@
   .log-item.user { color: var(--accent); }
   .log-item.claude { color: var(--ink); }
 
+  #phrases-section {
+    width: 100%;
+  }
+  .section-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+  #phrase-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .phrase-btn {
+    text-align: left;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid #3a3733;
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .phrase-btn:hover { border-color: var(--accent); }
+
+  #phrase-editor {
+    width: 100%;
+    margin-top: 6px;
+    padding: 6px;
+    font-size: 11px;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid #3a3733;
+    border-radius: 4px;
+    font-family: inherit;
+    resize: vertical;
+  }
+  #phrase-save {
+    margin-top: 6px;
+    font-size: 11px;
+    padding: 4px 10px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
   details {
     width: 100%;
     font-size: 11.5px;
@@ -105,6 +155,25 @@
   <div id="status">停止中</div>
 
   <div id="log"></div>
+
+  <div id="phrases-section">
+    <div class="section-title">📌 定例文(押すと入力欄に反映、送信は自分で押す)</div>
+    <div id="phrase-buttons"></div>
+    <details>
+      <summary>定例文を編集</summary>
+      <p style="margin:6px 0;font-size:11px;color:var(--ink-soft)">
+        1つのテンプレート = 1行目がボタンの名前、2行目以降が実際に入力欄へ反映される本文(複数行OK)。
+        テンプレート同士は「---」だけの行で区切ってください。
+      </p>
+      <textarea id="phrase-editor" rows="10" placeholder="ボタン名1
+本文1行目
+本文2行目
+---
+ボタン名2
+本文(長文もOK)"></textarea>
+      <button id="phrase-save">保存</button>
+    </details>
+  </div>
 
   <details>
     <summary>手動セレクタ設定(自動検出がうまくいかない場合)</summary>

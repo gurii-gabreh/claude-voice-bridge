@@ -11,6 +11,46 @@
   const selInput = document.getElementById("sel-input");
   const selSend = document.getElementById("sel-send");
   const selMessage = document.getElementById("sel-message");
+  const phraseButtonsEl = document.getElementById("phrase-buttons");
+  const phraseEditorEl = document.getElementById("phrase-editor");
+  const phraseSaveBtn = document.getElementById("phrase-save");
+
+  // テンプレートは { label, text } の配列。textは複数行の長文も可。
+  // エディタ上では "---" だけの行で区切り、各ブロックの1行目をlabel、
+  // 残りをtextとして扱う(長いテンプレートも「ごろっと」登録できるようにするため)。
+  const DEFAULT_TEMPLATES = [
+    { label: "役割・基本ルールを確認", text: "まずdata/claude-core-rules.mdを読んでから回答してください。" },
+    { label: "仮想的な話であることを明示", text: "これは仮想的な話です。" },
+    { label: "根拠を明示させる", text: "根拠となる情報を明示した上で回答してください。" },
+  ];
+
+  function parseTemplatesText(raw) {
+    const lines = raw.split("\n");
+    const blocks = [];
+    let current = [];
+    for (const line of lines) {
+      if (line.trim() === "---") {
+        blocks.push(current);
+        current = [];
+      } else {
+        current.push(line);
+      }
+    }
+    blocks.push(current);
+    return blocks
+      .map((blockLines) => blockLines.join("\n").trim())
+      .filter(Boolean)
+      .map((block) => {
+        const blockLines = block.split("\n");
+        const label = blockLines[0].trim();
+        const text = blockLines.slice(1).join("\n").trim() || label;
+        return { label, text };
+      });
+  }
+
+  function templatesToText(templates) {
+    return templates.map((t) => `${t.label}\n${t.text}`).join("\n---\n");
+  }
 
   let conversationMode = false;
   let recognizing = false;
@@ -177,6 +217,52 @@
       // claude.aiのタブがまだ無い/読み込み中の場合は無視
     }
   })();
+
+  // ---- 定例文ボタン ----
+  async function insertTextToPage(text) {
+    const tabId = await getActiveClaudeTabId();
+    if (!tabId) {
+      setStatus("claude.aiのタブを開いて、アクティブにしてください", "error");
+      return;
+    }
+    try {
+      const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-insert-text", text });
+      if (!res || !res.ok) {
+        setStatus("入力欄が見つかりませんでした。手動セレクタ設定を確認してください", "error");
+      }
+    } catch (e) {
+      setStatus("claude.aiのページとの通信に失敗しました(ページを再読み込みしてください)", "error");
+    }
+  }
+
+  function renderTemplateButtons(templates) {
+    phraseButtonsEl.innerHTML = "";
+    templates.forEach((t) => {
+      const btn = document.createElement("button");
+      btn.className = "phrase-btn";
+      btn.textContent = t.label;
+      btn.title = t.text.length > 40 ? t.text.slice(0, 40) + "…" : t.text;
+      btn.addEventListener("click", () => insertTextToPage(t.text));
+      phraseButtonsEl.appendChild(btn);
+    });
+  }
+
+  async function loadTemplates() {
+    const stored = await chrome.storage.local.get("cvb_templates");
+    const templates = stored.cvb_templates && stored.cvb_templates.length
+      ? stored.cvb_templates
+      : DEFAULT_TEMPLATES;
+    renderTemplateButtons(templates);
+    phraseEditorEl.value = templatesToText(templates);
+  }
+
+  phraseSaveBtn.addEventListener("click", async () => {
+    const templates = parseTemplatesText(phraseEditorEl.value);
+    await chrome.storage.local.set({ cvb_templates: templates });
+    renderTemplateButtons(templates);
+  });
+
+  loadTemplates();
 
   setStatus("停止中");
 })();

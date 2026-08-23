@@ -152,6 +152,17 @@
       });
       return true;
     }
+    if (msg.type === "cvb-insert-text") {
+      // 定例文ボタン用: 入力欄へ反映するだけで送信はしない(送信は自分で押す想定)
+      const input = findComposerInput();
+      if (!input) {
+        sendResponse({ ok: false, reason: "input-not-found" });
+        return true;
+      }
+      setComposerText(input, msg.text);
+      sendResponse({ ok: true });
+      return true;
+    }
     if (msg.type === "cvb-send-text") {
       const input = findComposerInput();
       if (!input) {
