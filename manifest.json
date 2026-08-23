@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Claude Voice Bridge",
+  "version": "0.2.0",
+  "description": "claude.aiとの会話を音声で行うための拡張機能。サイドパネルのマイクボタンで話すと入力欄へ自動入力・送信し、応答を読み上げます。",
+  "permissions": ["sidePanel", "activeTab", "scripting"],
+  "host_permissions": ["https://claude.ai/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "Claude Voice Bridgeを開く"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://claude.ai/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "128": "icon.png"
+  }
+}

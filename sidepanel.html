@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Claude Voice Bridge</title>
+<style>
+  :root {
+    --bg: #1c1b1a;
+    --surface: #262422;
+    --ink: #f2ede6;
+    --ink-soft: #b8b0a6;
+    --accent: #d97757;
+    --listening: #2e7d32;
+    --speaking: #1565c0;
+    --error: #b3352a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    min-height: 100vh;
+  }
+  h1 { font-size: 15px; font-weight: 700; margin: 0; }
+  .sub { font-size: 12px; color: var(--ink-soft); text-align: center; margin: 0; }
+
+  #mic-btn {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 36px;
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+  #mic-btn:hover { transform: scale(1.04); }
+  #mic-btn.listening { background: var(--listening); animation: pulse 1.2s infinite; }
+  #mic-btn.speaking { background: var(--speaking); }
+  #mic-btn.error { background: var(--error); }
+
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.5); }
+    70% { box-shadow: 0 0 0 16px rgba(46, 125, 50, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0); }
+  }
+
+  #status {
+    font-size: 13px;
+    color: var(--ink-soft);
+    text-align: center;
+    min-height: 18px;
+  }
+
+  #log {
+    width: 100%;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .log-item {
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+  .log-item.user { color: var(--accent); }
+  .log-item.claude { color: var(--ink); }
+
+  details {
+    width: 100%;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+  summary { cursor: pointer; }
+  input[type="text"] {
+    width: 100%;
+    margin-top: 6px;
+    padding: 4px 6px;
+    font-size: 11px;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid #3a3733;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>🎤 Claude Voice Bridge</h1>
+  <p class="sub">マイクを押すと話しかけられます。話し終えると自動でclaude.aiへ送信・応答を読み上げます。</p>
+
+  <button id="mic-btn" title="クリックで音声会話モードの開始/停止">🎤</button>
+  <div id="status">停止中</div>
+
+  <div id="log"></div>
+
+  <details>
+    <summary>手動セレクタ設定(自動検出がうまくいかない場合)</summary>
+    <label>入力欄のCSSセレクタ</label>
+    <input type="text" id="sel-input" placeholder="例: div[contenteditable=true]">
+    <label>送信ボタンのCSSセレクタ</label>
+    <input type="text" id="sel-send" placeholder="例: button[aria-label=Send]">
+    <label>メッセージブロックのCSSセレクタ</label>
+    <input type="text" id="sel-message" placeholder="例: [data-testid=message]">
+  </details>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
