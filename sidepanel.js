@@ -164,18 +164,21 @@
 
   async function sendTextToPage(text) {
     activeTabId = await getActiveClaudeTabId();
+    console.log("[cvb-panel] sendTextToPage activeTabId=", activeTabId, "text=", text);
     if (!activeTabId) {
       setStatus("claude.aiのタブを開いて、アクティブにしてください", "error");
       return false;
     }
     try {
       const res = await chrome.tabs.sendMessage(activeTabId, { type: "cvb-send-text", text });
+      console.log("[cvb-panel] cvb-send-text の応答:", res);
       if (!res || !res.ok) {
         setStatus("入力欄が見つかりませんでした。下の手動セレクタ設定を確認してください", "error");
         return false;
       }
       return true;
     } catch (e) {
+      console.log("[cvb-panel] cvb-send-text 送信失敗:", e);
       setStatus("claude.aiのページとの通信に失敗しました(ページを再読み込みしてください)", "error");
       return false;
     }
@@ -183,6 +186,7 @@
 
   // content.jsからの「応答が準備できた」通知を待つ
   chrome.runtime.onMessage.addListener((msg) => {
+    console.log("[cvb-panel] onMessage受信:", msg.type, msg);
     if (msg.type === "cvb-response-ready") {
       addLog("claude", msg.text || "(応答テキストを取得できませんでした)");
       speak(msg.text, () => {
@@ -193,6 +197,7 @@
   });
 
   function speak(text, onDone) {
+    console.log("[cvb-panel] speak() text=", JSON.stringify(text));
     if (!text) {
       onDone && onDone();
       return;
@@ -200,8 +205,14 @@
     setStatus("読み上げ中…", "speaking");
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = "ja-JP";
-    utter.onend = () => onDone && onDone();
-    utter.onerror = () => onDone && onDone();
+    utter.onend = () => {
+      console.log("[cvb-panel] speak() onend");
+      onDone && onDone();
+    };
+    utter.onerror = (e) => {
+      console.log("[cvb-panel] speak() onerror", e.error);
+      onDone && onDone();
+    };
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utter);
   }
@@ -221,15 +232,26 @@
   }
 
   function listenOnce() {
-    if (window.speechSynthesis.speaking) return; // フィードバックループ防止
+    if (window.speechSynthesis.speaking) {
+      console.log("[cvb-panel] listenOnce: 読み上げ中のためスキップ");
+      return; // フィードバックループ防止
+    }
     recognition = createRecognition();
     if (!recognition) return;
     recognizing = true;
     micPermissionBtn.style.display = "none";
     setStatus("聞いています…", "listening");
+    console.log("[cvb-panel] listenOnce: recognition.start()");
+
+    // onresult/onerrorのどちらかで既に後続処理(再開 or 停止)を決めた場合はtrueにする。
+    // falseのままonendを迎えたら「エラーも結果も無いまま終了」という想定外パターンなので、
+    // conversationMode中なら明示的に再開する(でないとマイクが無言のまま止まって見える)。
+    let handled = false;
 
     recognition.onresult = async (event) => {
+      handled = true;
       const transcript = event.results[0][0].transcript;
+      console.log("[cvb-panel] onresult:", transcript);
       recognizing = false;
       addLog("user", transcript);
       setStatus("送信中…");
@@ -241,23 +263,35 @@
     };
 
     recognition.onerror = (event) => {
+      console.log("[cvb-panel] onerror:", event.error);
       recognizing = false;
       if (event.error === "no-speech" || event.error === "aborted") {
+        handled = true;
         if (conversationMode) listenOnce();
         return;
       }
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        handled = true;
         conversationMode = false;
         micBtn.textContent = "🎤";
         setStatus("マイクが許可されていません。下の「マイクの許可ページを開く」から許可してください", "error");
         micPermissionBtn.style.display = "block";
         return;
       }
+      // それ以外のエラーは一旦表示するが、handledはtrueにしない(onendでの
+      // 再開判断に委ねる。会話モード中なら止まりきりにしない)
       setStatus(`音声認識エラー: ${event.error}`, "error");
     };
 
     recognition.onend = () => {
+      console.log("[cvb-panel] onend recognizing=false conversationMode=", conversationMode, "handled=", handled);
       recognizing = false;
+      if (!handled && conversationMode) {
+        console.log("[cvb-panel] onend: 未処理のまま終了したため再開します");
+        setTimeout(() => {
+          if (conversationMode) listenOnce();
+        }, 300);
+      }
     };
 
     recognition.start();

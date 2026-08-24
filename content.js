@@ -87,16 +87,20 @@
     const override = localStorage.getItem(STORAGE_KEYS.message);
     if (override) {
       try {
-        return Array.from(document.querySelectorAll(override));
+        const matched = Array.from(document.querySelectorAll(override));
+        console.info(`[cvb] findMessageBlocks: 手動セレクタ"${override}"で${matched.length}件`);
+        return matched;
       } catch (e) {
         console.warn("[cvb] invalid selector override for message", e);
       }
     }
     const root = document.querySelector("main") || document.body;
-    return Array.from(root.querySelectorAll("div, article")).filter((el) => {
+    const matched = Array.from(root.querySelectorAll("div, article")).filter((el) => {
       const text = el.textContent || "";
       return text.trim().length > 20 && text.trim().length < 20000;
     });
+    console.info(`[cvb] findMessageBlocks: 自動検出(div,article)で${matched.length}件`);
+    return matched;
   }
 
   function setComposerText(el, text) {
@@ -169,6 +173,7 @@
       // 別物なので、手動セレクタはこのメッセージ経由でページ側に書き込む。
       if (msg.value) localStorage.setItem(msg.key, msg.value);
       else localStorage.removeItem(msg.key);
+      console.info(`[cvb] cvb-set-selector: ${msg.key} = "${msg.value}"`);
       sendResponse({ ok: true });
       return true;
     }
@@ -205,7 +210,15 @@
       waitForResponse(() => {
         const responseText = extractLatestResponseText();
         console.info(`[cvb] waitForResponse: 応答テキスト(${responseText.length}文字)`, responseText.slice(0, 80));
-        chrome.runtime.sendMessage({ type: "cvb-response-ready", text: responseText });
+        chrome.runtime.sendMessage({ type: "cvb-response-ready", text: responseText }, () => {
+          if (chrome.runtime.lastError) {
+            // サイドパネルが閉じている等で受け手がいないと失敗する。応答自体の取得は
+            // 成功しているので、原因切り分けのためにログだけ残す。
+            console.warn("[cvb] cvb-response-ready の送信に失敗:", chrome.runtime.lastError.message);
+          } else {
+            console.info("[cvb] cvb-response-ready を送信済み");
+          }
+        });
       });
       sendResponse({ ok: true });
       return true;
