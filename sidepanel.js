@@ -17,6 +17,11 @@
   const phraseButtonsEl = document.getElementById("phrase-buttons");
   const phraseEditorEl = document.getElementById("phrase-editor");
   const phraseSaveBtn = document.getElementById("phrase-save");
+  const micPermissionBtn = document.getElementById("mic-permission-btn");
+
+  micPermissionBtn.addEventListener("click", () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL("permission.html") });
+  });
 
   // テンプレートは { label, text } の配列。textは複数行の長文も可。
   // エディタ上では "---" だけの行で区切り、各ブロックの1行目をlabel、
@@ -220,6 +225,7 @@
     recognition = createRecognition();
     if (!recognition) return;
     recognizing = true;
+    micPermissionBtn.style.display = "none";
     setStatus("聞いています…", "listening");
 
     recognition.onresult = async (event) => {
@@ -238,6 +244,13 @@
       recognizing = false;
       if (event.error === "no-speech" || event.error === "aborted") {
         if (conversationMode) listenOnce();
+        return;
+      }
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        conversationMode = false;
+        micBtn.textContent = "🎤";
+        setStatus("マイクが許可されていません。下の「マイクの許可ページを開く」から許可してください", "error");
+        micPermissionBtn.style.display = "block";
         return;
       }
       setStatus(`音声認識エラー: ${event.error}`, "error");

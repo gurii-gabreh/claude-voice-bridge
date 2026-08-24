@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>マイクの許可 — Claude Voice Bridge</title>
+<style>
+  body {
+    margin: 0;
+    background: #1c1b1a;
+    color: #f2ede6;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    padding: 32px 24px;
+    max-width: 480px;
+  }
+  h1 { font-size: 18px; }
+  p { font-size: 13.5px; line-height: 1.7; color: #b8b0a6; }
+  button {
+    font-size: 14px;
+    padding: 10px 18px;
+    background: #d97757;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  #result {
+    margin-top: 16px;
+    font-size: 13px;
+    padding: 10px 12px;
+    border-radius: 6px;
+  }
+  #result.ok { background: rgba(46, 125, 50, 0.2); color: #6fcf78; }
+  #result.ng { background: rgba(179, 53, 42, 0.2); color: #ff8a80; }
+</style>
+</head>
+<body>
+  <h1>🎤 マイクの使用を許可してください</h1>
+  <p>
+    Chromeの仕様上、サイドパネルの画面からはマイクの許可ダイアログが正しく表示されないことがあります。
+    このページ(タブとして開いた拡張機能のページ)で一度許可しておくと、以後サイドパネルの音声会話機能も使えるようになります。
+  </p>
+  <button id="allow-btn">マイクの使用を許可する</button>
+  <div id="result"></div>
+
+  <script src="permission.js"></script>
+</body>
+</html>

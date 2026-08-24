@@ -83,6 +83,16 @@
     min-height: 18px;
   }
 
+  #mic-permission-btn {
+    font-size: 12px;
+    padding: 6px 12px;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--error);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
   #log {
     width: 100%;
     flex: 1 1 auto;
@@ -180,6 +190,7 @@
   </div>
   <div id="state-tag">IDLE</div>
   <div id="status">停止中</div>
+  <button id="mic-permission-btn" type="button" style="display:none">🎤 マイクの許可ページを開く</button>
 
   <div id="log"></div>
 
