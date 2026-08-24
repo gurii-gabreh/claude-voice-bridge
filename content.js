@@ -32,8 +32,25 @@
     }
   }
 
+  function describeEl(el) {
+    if (!el) return "(none)";
+    const id = el.id ? `#${el.id}` : "";
+    const cls = el.className && typeof el.className === "string"
+      ? "." + el.className.trim().split(/\s+/).slice(0, 3).join(".")
+      : "";
+    return `${el.tagName.toLowerCase()}${id}${cls}`;
+  }
+
   function isVisible(el) {
-    return !!(el && el.offsetParent !== null);
+    if (!el) return false;
+    const style = window.getComputedStyle(el);
+    if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) {
+      return false;
+    }
+    // offsetParentは position:fixed の要素でnullになる既知の仕様があり、
+    // 画面下部に固定された入力欄を誤って「非表示」と判定してしまうため使わない。
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
   }
 
   function findComposerInput() {
@@ -42,10 +59,15 @@
     const candidates = Array.from(
       document.querySelectorAll('div[contenteditable="true"], textarea')
     ).filter(isVisible);
+    console.info(
+      `[cvb] findComposerInput: ${candidates.length}件の候補 -> `,
+      candidates.map(describeEl)
+    );
     if (candidates.length === 0) return null;
     candidates.sort(
       (a, b) => b.getBoundingClientRect().bottom - a.getBoundingClientRect().bottom
     );
+    console.info(`[cvb] findComposerInput: 選択した要素 = ${describeEl(candidates[0])}`);
     return candidates[0];
   }
 
@@ -57,6 +79,7 @@
       const label = (b.getAttribute("aria-label") || b.title || "").toLowerCase();
       return label.includes("send") || label.includes("送信");
     });
+    console.info(`[cvb] findSendButton: ${bySendLabel ? describeEl(bySendLabel) : "見つからず(Enterキー送信にフォールバック)"}`);
     return bySendLabel || null;
   }
 
@@ -94,9 +117,14 @@
   function submitComposer(el) {
     const sendBtn = findSendButton();
     if (sendBtn && !sendBtn.disabled) {
+      console.info("[cvb] submitComposer: 送信ボタンをクリック");
       sendBtn.click();
       return true;
     }
+    // 送信ボタンが見つからない/disabledの場合のフォールバック。ただし合成KeyboardEventは
+    // isTrusted=falseになるため、React等のイベントハンドラが無視して実際には送信されない
+    // ことがある(既知の制約。この場合は手動セレクタで送信ボタンを明示指定するのが確実)。
+    console.warn("[cvb] submitComposer: 送信ボタンが見つからないためEnterキーをシミュレート(効かない場合は手動セレクタ設定で送信ボタンを指定してください)");
     el.dispatchEvent(
       new KeyboardEvent("keydown", { key: "Enter", code: "Enter", keyCode: 13, bubbles: true })
     );
@@ -166,14 +194,17 @@
     if (msg.type === "cvb-send-text") {
       const input = findComposerInput();
       if (!input) {
+        console.warn("[cvb] cvb-send-text: 入力欄が見つかりませんでした");
         sendResponse({ ok: false, reason: "input-not-found" });
         return true;
       }
       seenMessageCount = findMessageBlocks().length;
+      console.info(`[cvb] cvb-send-text: ${describeEl(input)} へ入力 -> "${msg.text}"`);
       setComposerText(input, msg.text);
       submitComposer(input);
       waitForResponse(() => {
         const responseText = extractLatestResponseText();
+        console.info(`[cvb] waitForResponse: 応答テキスト(${responseText.length}文字)`, responseText.slice(0, 80));
         chrome.runtime.sendMessage({ type: "cvb-response-ready", text: responseText });
       });
       sendResponse({ ok: true });
