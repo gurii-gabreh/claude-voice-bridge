@@ -64,6 +64,19 @@
   let recognizing = false;
   let recognition = null;
   let activeTabId = null;
+  let restartTimer = null;
+  const RESTART_DELAY_MS = 500;
+
+  // 音声認識の再開は必ずこの関数経由にする。エラー直後に間を置かずrecognition.start()を
+  // 呼ぶと、ブラウザがマイクを解放し切る前の再開衝突で即座に"aborted"エラーとなり、
+  // 再開→即エラー→再開…の無限ループになる不具合があったため、必ず一定時間空ける。
+  function scheduleRestart(delayMs) {
+    if (restartTimer) clearTimeout(restartTimer);
+    restartTimer = setTimeout(() => {
+      restartTimer = null;
+      if (conversationMode) listenOnce();
+    }, delayMs != null ? delayMs : RESTART_DELAY_MS);
+  }
 
   // ---- レーダー風ビジュアル(JARVIS風演出。見た目のみで機能には影響しない) ----
   const STATE_COLORS = {
@@ -179,7 +192,9 @@
       return true;
     } catch (e) {
       console.log("[cvb-panel] cvb-send-text 送信失敗:", e);
-      setStatus("claude.aiのページとの通信に失敗しました(ページを再読み込みしてください)", "error");
+      // "Could not establish connection..."は、拡張機能を更新/再読み込みした後に
+      // claude.aiのタブ自体をリロードしていない場合に必ず出る(content.jsが未注入のため)。
+      setStatus("claude.aiのタブをリロード(F5)してください(拡張機能更新後は毎回タブの再読み込みが必要です)", "error");
       return false;
     }
   }
@@ -190,7 +205,7 @@
     if (msg.type === "cvb-response-ready") {
       addLog("claude", msg.text || "(応答テキストを取得できませんでした)");
       speak(msg.text, () => {
-        if (conversationMode) listenOnce();
+        if (conversationMode) scheduleRestart();
         else setStatus("停止中");
       });
     }
@@ -257,7 +272,7 @@
       setStatus("送信中…");
       const ok = await sendTextToPage(transcript);
       if (!ok && conversationMode) {
-        listenOnce();
+        scheduleRestart();
       }
       // ok === true の場合、応答はcvb-response-readyメッセージを待って処理する
     };
@@ -267,7 +282,7 @@
       recognizing = false;
       if (event.error === "no-speech" || event.error === "aborted") {
         handled = true;
-        if (conversationMode) listenOnce();
+        if (conversationMode) scheduleRestart();
         return;
       }
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
@@ -288,9 +303,7 @@
       recognizing = false;
       if (!handled && conversationMode) {
         console.log("[cvb-panel] onend: 未処理のまま終了したため再開します");
-        setTimeout(() => {
-          if (conversationMode) listenOnce();
-        }, 300);
+        scheduleRestart();
       }
     };
 
@@ -306,6 +319,10 @@
   function stopConversation() {
     conversationMode = false;
     micBtn.textContent = "🎤";
+    if (restartTimer) {
+      clearTimeout(restartTimer);
+      restartTimer = null;
+    }
     if (recognition && recognizing) recognition.abort();
     window.speechSynthesis.cancel();
     setStatus("停止中");
