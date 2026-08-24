@@ -30,28 +30,51 @@
   h1 { font-size: 15px; font-weight: 700; margin: 0; }
   .sub { font-size: 12px; color: var(--ink-soft); text-align: center; margin: 0; }
 
+  #radar-wrap {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    max-width: 100%;
+  }
+  #radar {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
   #mic-btn {
-    width: 96px;
-    height: 96px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 72px;
+    height: 72px;
     border-radius: 50%;
     border: none;
     cursor: pointer;
-    font-size: 36px;
+    font-size: 28px;
     background: var(--accent);
     color: #fff;
     box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
     transition: background 0.15s ease, transform 0.1s ease;
   }
-  #mic-btn:hover { transform: scale(1.04); }
-  #mic-btn.listening { background: var(--listening); animation: pulse 1.2s infinite; }
+  #mic-btn:hover { transform: translate(-50%, -50%) scale(1.05); }
+  #mic-btn.listening { background: var(--listening); }
   #mic-btn.speaking { background: var(--speaking); }
   #mic-btn.error { background: var(--error); }
 
-  @keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.5); }
-    70% { box-shadow: 0 0 0 16px rgba(46, 125, 50, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0); }
+  #state-tag {
+    font-family: "Courier New", monospace;
+    font-size: 12px;
+    letter-spacing: 3px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    text-shadow: 0 0 6px currentColor;
   }
+  #state-tag.listening { color: var(--listening); }
+  #state-tag.speaking { color: var(--speaking); }
+  #state-tag.error { color: var(--error); }
 
   #status {
     font-size: 13px;
@@ -151,7 +174,11 @@
   <h1>🎤 Claude Voice Bridge</h1>
   <p class="sub">マイクを押すと話しかけられます。話し終えると自動でclaude.aiへ送信・応答を読み上げます。</p>
 
-  <button id="mic-btn" title="クリックで音声会話モードの開始/停止">🎤</button>
+  <div id="radar-wrap">
+    <canvas id="radar" width="220" height="220"></canvas>
+    <button id="mic-btn" title="クリックで音声会話モードの開始/停止">🎤</button>
+  </div>
+  <div id="state-tag">IDLE</div>
   <div id="status">停止中</div>
 
   <div id="log"></div>

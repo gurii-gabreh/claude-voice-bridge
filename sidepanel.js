@@ -7,6 +7,9 @@
 
   const micBtn = document.getElementById("mic-btn");
   const statusEl = document.getElementById("status");
+  const stateTagEl = document.getElementById("state-tag");
+  const radarCanvas = document.getElementById("radar");
+  const radarCtx = radarCanvas.getContext("2d");
   const logEl = document.getElementById("log");
   const selInput = document.getElementById("sel-input");
   const selSend = document.getElementById("sel-send");
@@ -57,10 +60,84 @@
   let recognition = null;
   let activeTabId = null;
 
+  // ---- レーダー風ビジュアル(JARVIS風演出。見た目のみで機能には影響しない) ----
+  const STATE_COLORS = {
+    idle: "120, 140, 150",
+    listening: "46, 204, 113",
+    speaking: "41, 121, 255",
+    error: "231, 76, 60",
+  };
+  let visualState = "idle";
+
+  function drawRadar(t) {
+    const w = radarCanvas.width;
+    const h = radarCanvas.height;
+    const cx = w / 2;
+    const cy = h / 2;
+    const active = visualState === "listening" || visualState === "speaking";
+    const color = STATE_COLORS[visualState] || STATE_COLORS.idle;
+    const baseR = Math.min(w, h) / 2 - 8;
+
+    radarCtx.clearRect(0, 0, w, h);
+
+    // 外側の回転する破線リング
+    radarCtx.save();
+    radarCtx.translate(cx, cy);
+    radarCtx.rotate((t / (active ? 4000 : 14000)) % (Math.PI * 2));
+    radarCtx.strokeStyle = `rgba(${color}, 0.55)`;
+    radarCtx.lineWidth = 1;
+    radarCtx.setLineDash([4, 7]);
+    radarCtx.beginPath();
+    radarCtx.arc(0, 0, baseR, 0, Math.PI * 2);
+    radarCtx.stroke();
+    radarCtx.restore();
+
+    // 内側の固定リング
+    radarCtx.setLineDash([]);
+    radarCtx.strokeStyle = `rgba(${color}, 0.3)`;
+    radarCtx.beginPath();
+    radarCtx.arc(cx, cy, baseR * 0.72, 0, Math.PI * 2);
+    radarCtx.stroke();
+
+    // 中心の発光コア(状態に応じて脈動)
+    const pulse = active ? (Math.sin(t / 220) + 1) / 2 : 0.12;
+    const coreR = baseR * (0.22 + pulse * 0.12);
+    const grad = radarCtx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 2.4);
+    grad.addColorStop(0, `rgba(${color}, 0.85)`);
+    grad.addColorStop(0.5, `rgba(${color}, 0.22)`);
+    grad.addColorStop(1, `rgba(${color}, 0)`);
+    radarCtx.fillStyle = grad;
+    radarCtx.beginPath();
+    radarCtx.arc(cx, cy, coreR * 2.4, 0, Math.PI * 2);
+    radarCtx.fill();
+
+    // 周回する粒子
+    const dotCount = 8;
+    for (let i = 0; i < dotCount; i++) {
+      const angle = (i / dotCount) * Math.PI * 2 + t / (active ? 1300 : 7000);
+      const r = baseR * 0.9;
+      const x = cx + Math.cos(angle) * r;
+      const y = cy + Math.sin(angle) * r;
+      radarCtx.fillStyle = `rgba(${color}, ${0.4 + 0.35 * Math.sin(t / 300 + i)})`;
+      radarCtx.beginPath();
+      radarCtx.arc(x, y, 1.6, 0, Math.PI * 2);
+      radarCtx.fill();
+    }
+
+    requestAnimationFrame(drawRadar);
+  }
+  requestAnimationFrame(drawRadar);
+
   function setStatus(text, cls) {
     statusEl.textContent = text;
     micBtn.classList.remove("listening", "speaking", "error");
-    if (cls) micBtn.classList.add(cls);
+    stateTagEl.classList.remove("listening", "speaking", "error");
+    if (cls) {
+      micBtn.classList.add(cls);
+      stateTagEl.classList.add(cls);
+    }
+    visualState = cls || "idle";
+    stateTagEl.textContent = (cls || "idle").toUpperCase();
   }
 
   function addLog(role, text) {
