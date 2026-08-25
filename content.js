@@ -120,6 +120,9 @@
 
   function submitComposer(el) {
     const sendBtn = findSendButton();
+    if (sendBtn && sendBtn.disabled) {
+      console.warn("[cvb] submitComposer: 送信ボタンは見つかったがdisabled状態(入力欄の状態更新が反映される前に押している可能性)");
+    }
     if (sendBtn && !sendBtn.disabled) {
       console.info("[cvb] submitComposer: 送信ボタンをクリック");
       sendBtn.click();
@@ -128,7 +131,7 @@
     // 送信ボタンが見つからない/disabledの場合のフォールバック。ただし合成KeyboardEventは
     // isTrusted=falseになるため、React等のイベントハンドラが無視して実際には送信されない
     // ことがある(既知の制約。この場合は手動セレクタで送信ボタンを明示指定するのが確実)。
-    console.warn("[cvb] submitComposer: 送信ボタンが見つからないためEnterキーをシミュレート(効かない場合は手動セレクタ設定で送信ボタンを指定してください)");
+    console.warn("[cvb] submitComposer: 送信ボタンが押せないためEnterキーをシミュレート(効かない場合は手動セレクタ設定で送信ボタンを指定してください)");
     el.dispatchEvent(
       new KeyboardEvent("keydown", { key: "Enter", code: "Enter", keyCode: 13, bubbles: true })
     );
@@ -140,17 +143,39 @@
 
   function waitForResponse(onSettled) {
     const root = document.querySelector("main") || document.body;
-    let timer = null;
-    const observer = new MutationObserver(() => {
-      clearTimeout(timer);
-      timer = setTimeout(finish, 1200);
-    });
-    function finish() {
-      observer.disconnect();
-      onSettled();
+    const startCount = seenMessageCount;
+
+    function startSettleWatch() {
+      let timer = null;
+      const observer = new MutationObserver(() => {
+        clearTimeout(timer);
+        timer = setTimeout(finish, 1200);
+      });
+      function finish() {
+        observer.disconnect();
+        onSettled();
+      }
+      observer.observe(root, { childList: true, subtree: true, characterData: true });
+      timer = setTimeout(finish, 30000);
     }
-    observer.observe(root, { childList: true, subtree: true, characterData: true });
-    timer = setTimeout(finish, 30000);
+
+    // フェーズ1: 新しい応答ブロックが実際に現れるまで待つ。生成開始前の「考え中」の
+    // 沈黙時間中に旧ロジックの1.2秒無変化判定が誤って早期成立し、まだ存在しない
+    // 新しい返答の代わりに直前の返答を拾ってしまう不具合があったための対策。
+    const appearTimeout = setTimeout(() => {
+      appearObserver.disconnect();
+      console.warn("[cvb] waitForResponse: 新規ブロック出現待ちがタイムアウトしたため現状で判定します");
+      startSettleWatch();
+    }, 15000);
+    const appearObserver = new MutationObserver(() => {
+      if (findMessageBlocks().length > startCount) {
+        clearTimeout(appearTimeout);
+        appearObserver.disconnect();
+        console.info("[cvb] waitForResponse: 新規ブロック出現を確認、完了判定(フェーズ2)を開始");
+        startSettleWatch();
+      }
+    });
+    appearObserver.observe(root, { childList: true, subtree: true });
   }
 
   function extractLatestResponseText() {
@@ -206,20 +231,25 @@
       seenMessageCount = findMessageBlocks().length;
       console.info(`[cvb] cvb-send-text: ${describeEl(input)} へ入力 -> "${msg.text}"`);
       setComposerText(input, msg.text);
-      submitComposer(input);
-      waitForResponse(() => {
-        const responseText = extractLatestResponseText();
-        console.info(`[cvb] waitForResponse: 応答テキスト(${responseText.length}文字)`, responseText.slice(0, 80));
-        chrome.runtime.sendMessage({ type: "cvb-response-ready", text: responseText }, () => {
-          if (chrome.runtime.lastError) {
-            // サイドパネルが閉じている等で受け手がいないと失敗する。応答自体の取得は
-            // 成功しているので、原因切り分けのためにログだけ残す。
-            console.warn("[cvb] cvb-response-ready の送信に失敗:", chrome.runtime.lastError.message);
-          } else {
-            console.info("[cvb] cvb-response-ready を送信済み");
-          }
+      // 入力直後だとProseMirror/React側の状態更新(送信ボタンの有効化)が
+      // まだ反映されておらず、disabled状態のボタンを掴んでEnterキー
+      // フォールバックに落ちてしまうことがあったため、少し間を置く。
+      setTimeout(() => {
+        submitComposer(input);
+        waitForResponse(() => {
+          const responseText = extractLatestResponseText();
+          console.info(`[cvb] waitForResponse: 応答テキスト(${responseText.length}文字)`, responseText.slice(0, 80));
+          chrome.runtime.sendMessage({ type: "cvb-response-ready", text: responseText }, () => {
+            if (chrome.runtime.lastError) {
+              // サイドパネルが閉じている等で受け手がいないと失敗する。応答自体の取得は
+              // 成功しているので、原因切り分けのためにログだけ残す。
+              console.warn("[cvb] cvb-response-ready の送信に失敗:", chrome.runtime.lastError.message);
+            } else {
+              console.info("[cvb] cvb-response-ready を送信済み");
+            }
+          });
         });
-      });
+      }, 150);
       sendResponse({ ok: true });
       return true;
     }
