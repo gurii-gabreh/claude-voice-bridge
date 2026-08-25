@@ -149,7 +149,7 @@
       let timer = null;
       const observer = new MutationObserver(() => {
         clearTimeout(timer);
-        timer = setTimeout(finish, 1200);
+        timer = setTimeout(finish, 700);
       });
       function finish() {
         observer.disconnect();
@@ -249,7 +249,7 @@
             }
           });
         });
-      }, 150);
+      }, 80);
       sendResponse({ ok: true });
       return true;
     }

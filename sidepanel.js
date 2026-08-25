@@ -65,7 +65,7 @@
   let recognition = null;
   let activeTabId = null;
   let restartTimer = null;
-  const RESTART_DELAY_MS = 500;
+  const RESTART_DELAY_MS = 350;
 
   // 音声認識の再開は必ずこの関数経由にする。エラー直後に間を置かずrecognition.start()を
   // 呼ぶと、ブラウザがマイクを解放し切る前の再開衝突で即座に"aborted"エラーとなり、
