@@ -1,17 +1,22 @@
 // Claude Voice Bridge — content script
-// claude.aiのページ内で動作し、サイドパネル(sidepanel.js)からのメッセージを受けて、
-// 入力欄への文字流し込み・送信・応答テキストの抽出だけを行う。音声認識・読み上げは
-// サイドパネル側の担当。
+// claude.ai / Gemini のページ内で動作し、サイドパネル(sidepanel.js)からのメッセージを
+// 受けて、入力欄への文字流し込み・送信・応答テキストの抽出だけを行う。音声認識・読み上げは
+// サイドパネル側の担当。この1つのcontent.jsが両サイトへ同じmatchesで注入される
+// (manifest.json参照)。
 //
-// claude.ai側のDOM構造は非公開・可変のため、要素の特定はheuristic(推測)+
-// localStorageでの手動セレクタ上書きの二段構えにしてある。動かない場合はDevToolsで
-// 実際の要素を調べ、下記のkeyでlocalStorageに手動セレクタを設定してください。
+// 両サイトともDOM構造は非公開・可変のため、要素の特定はheuristic(推測)+
+// localStorageでの手動セレクタ上書きの二段構えにしてある。localStorageはオリジン単位で
+// 分離されている(claude.aiとgemini.google.comは別オリジン)ため、サイトごとに
+// キー名を分ける必要はなく、下記の同じkeyがサイトごとに独立して効く。動かない場合は
+// DevToolsで実際の要素を調べ、下記のkeyでlocalStorageに手動セレクタを設定してください。
 //   localStorage.setItem('cvb_input_selector', '<入力欄のCSSセレクタ>')
 //   localStorage.setItem('cvb_send_selector', '<送信ボタンのCSSセレクタ>')
 //   localStorage.setItem('cvb_message_selector', '<メッセージブロックのCSSセレクタ>')
 
 (function () {
   "use strict";
+
+  const SITE = location.hostname.includes("gemini.google.com") ? "gemini" : "claude";
 
   const STORAGE_KEYS = {
     input: "cvb_input_selector",
@@ -27,7 +32,7 @@
     try {
       return document.querySelector(sel);
     } catch (e) {
-      console.warn("[cvb] invalid selector override for", key, sel, e);
+      console.warn(`[cvb:${SITE}] invalid selector override for`, key, sel, e);
       return null;
     }
   }
@@ -60,14 +65,14 @@
       document.querySelectorAll('div[contenteditable="true"], textarea')
     ).filter(isVisible);
     console.info(
-      `[cvb] findComposerInput: ${candidates.length}件の候補 -> `,
+      `[cvb:${SITE}] findComposerInput: ${candidates.length}件の候補 -> `,
       candidates.map(describeEl)
     );
     if (candidates.length === 0) return null;
     candidates.sort(
       (a, b) => b.getBoundingClientRect().bottom - a.getBoundingClientRect().bottom
     );
-    console.info(`[cvb] findComposerInput: 選択した要素 = ${describeEl(candidates[0])}`);
+    console.info(`[cvb:${SITE}] findComposerInput: 選択した要素 = ${describeEl(candidates[0])}`);
     return candidates[0];
   }
 
@@ -79,7 +84,7 @@
       const label = (b.getAttribute("aria-label") || b.title || "").toLowerCase();
       return label.includes("send") || label.includes("送信");
     });
-    console.info(`[cvb] findSendButton: ${bySendLabel ? describeEl(bySendLabel) : "見つからず(Enterキー送信にフォールバック)"}`);
+    console.info(`[cvb:${SITE}] findSendButton: ${bySendLabel ? describeEl(bySendLabel) : "見つからず(Enterキー送信にフォールバック)"}`);
     return bySendLabel || null;
   }
 
@@ -88,10 +93,10 @@
     if (override) {
       try {
         const matched = Array.from(document.querySelectorAll(override));
-        console.info(`[cvb] findMessageBlocks: 手動セレクタ"${override}"で${matched.length}件`);
+        console.info(`[cvb:${SITE}] findMessageBlocks: 手動セレクタ"${override}"で${matched.length}件`);
         return matched;
       } catch (e) {
-        console.warn("[cvb] invalid selector override for message", e);
+        console.warn(`[cvb:${SITE}] invalid selector override for message`, e);
       }
     }
     const root = document.querySelector("main") || document.body;
@@ -99,7 +104,7 @@
       const text = el.textContent || "";
       return text.trim().length > 20 && text.trim().length < 20000;
     });
-    console.info(`[cvb] findMessageBlocks: 自動検出(div,article)で${matched.length}件`);
+    console.info(`[cvb:${SITE}] findMessageBlocks: 自動検出(div,article)で${matched.length}件`);
     return matched;
   }
 
@@ -121,17 +126,17 @@
   function submitComposer(el) {
     const sendBtn = findSendButton();
     if (sendBtn && sendBtn.disabled) {
-      console.warn("[cvb] submitComposer: 送信ボタンは見つかったがdisabled状態(入力欄の状態更新が反映される前に押している可能性)");
+      console.warn(`[cvb:${SITE}] submitComposer: 送信ボタンは見つかったがdisabled状態(入力欄の状態更新が反映される前に押している可能性)`);
     }
     if (sendBtn && !sendBtn.disabled) {
-      console.info("[cvb] submitComposer: 送信ボタンをクリック");
+      console.info(`[cvb:${SITE}] submitComposer: 送信ボタンをクリック`);
       sendBtn.click();
       return true;
     }
     // 送信ボタンが見つからない/disabledの場合のフォールバック。ただし合成KeyboardEventは
     // isTrusted=falseになるため、React等のイベントハンドラが無視して実際には送信されない
     // ことがある(既知の制約。この場合は手動セレクタで送信ボタンを明示指定するのが確実)。
-    console.warn("[cvb] submitComposer: 送信ボタンが押せないためEnterキーをシミュレート(効かない場合は手動セレクタ設定で送信ボタンを指定してください)");
+    console.warn(`[cvb:${SITE}] submitComposer: 送信ボタンが押せないためEnterキーをシミュレート(効かない場合は手動セレクタ設定で送信ボタンを指定してください)`);
     el.dispatchEvent(
       new KeyboardEvent("keydown", { key: "Enter", code: "Enter", keyCode: 13, bubbles: true })
     );
@@ -164,14 +169,14 @@
     // 新しい返答の代わりに直前の返答を拾ってしまう不具合があったための対策。
     const appearTimeout = setTimeout(() => {
       appearObserver.disconnect();
-      console.warn("[cvb] waitForResponse: 新規ブロック出現待ちがタイムアウトしたため現状で判定します");
+      console.warn(`[cvb:${SITE}] waitForResponse: 新規ブロック出現待ちがタイムアウトしたため現状で判定します`);
       startSettleWatch();
     }, 15000);
     const appearObserver = new MutationObserver(() => {
       if (findMessageBlocks().length > startCount) {
         clearTimeout(appearTimeout);
         appearObserver.disconnect();
-        console.info("[cvb] waitForResponse: 新規ブロック出現を確認、完了判定(フェーズ2)を開始");
+        console.info(`[cvb:${SITE}] waitForResponse: 新規ブロック出現を確認、完了判定(フェーズ2)を開始`);
         startSettleWatch();
       }
     });
@@ -198,7 +203,7 @@
       // 別物なので、手動セレクタはこのメッセージ経由でページ側に書き込む。
       if (msg.value) localStorage.setItem(msg.key, msg.value);
       else localStorage.removeItem(msg.key);
-      console.info(`[cvb] cvb-set-selector: ${msg.key} = "${msg.value}"`);
+      console.info(`[cvb:${SITE}] cvb-set-selector: ${msg.key} = "${msg.value}"`);
       sendResponse({ ok: true });
       return true;
     }
@@ -224,12 +229,12 @@
     if (msg.type === "cvb-send-text") {
       const input = findComposerInput();
       if (!input) {
-        console.warn("[cvb] cvb-send-text: 入力欄が見つかりませんでした");
+        console.warn(`[cvb:${SITE}] cvb-send-text: 入力欄が見つかりませんでした`);
         sendResponse({ ok: false, reason: "input-not-found" });
         return true;
       }
       seenMessageCount = findMessageBlocks().length;
-      console.info(`[cvb] cvb-send-text: ${describeEl(input)} へ入力 -> "${msg.text}"`);
+      console.info(`[cvb:${SITE}] cvb-send-text: ${describeEl(input)} へ入力 -> "${msg.text}"`);
       setComposerText(input, msg.text);
       // 入力直後だとProseMirror/React側の状態更新(送信ボタンの有効化)が
       // まだ反映されておらず、disabled状態のボタンを掴んでEnterキー
@@ -238,14 +243,14 @@
         submitComposer(input);
         waitForResponse(() => {
           const responseText = extractLatestResponseText();
-          console.info(`[cvb] waitForResponse: 応答テキスト(${responseText.length}文字)`, responseText.slice(0, 80));
+          console.info(`[cvb:${SITE}] waitForResponse: 応答テキスト(${responseText.length}文字)`, responseText.slice(0, 80));
           chrome.runtime.sendMessage({ type: "cvb-response-ready", text: responseText }, () => {
             if (chrome.runtime.lastError) {
               // サイドパネルが閉じている等で受け手がいないと失敗する。応答自体の取得は
               // 成功しているので、原因切り分けのためにログだけ残す。
-              console.warn("[cvb] cvb-response-ready の送信に失敗:", chrome.runtime.lastError.message);
+              console.warn(`[cvb:${SITE}] cvb-response-ready の送信に失敗:`, chrome.runtime.lastError.message);
             } else {
-              console.info("[cvb] cvb-response-ready を送信済み");
+              console.info(`[cvb:${SITE}] cvb-response-ready を送信済み`);
             }
           });
         });

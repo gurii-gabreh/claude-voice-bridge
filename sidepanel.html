@@ -5,82 +5,133 @@
 <title>Claude Voice Bridge</title>
 <style>
   :root {
-    --bg: #1c1b1a;
-    --surface: #262422;
-    --ink: #f2ede6;
-    --ink-soft: #b8b0a6;
-    --accent: #d97757;
-    --listening: #2e7d32;
-    --speaking: #1565c0;
-    --error: #b3352a;
+    --bg: #05080c;
+    --surface: #0d1620;
+    --panel-border: #163041;
+    --ink: #d8f3ff;
+    --ink-soft: #6f93a8;
+    --accent: #29e6ff;
+    --listening: #2ee6a0;
+    --speaking: #4da8ff;
+    --keyword: #29e6ff;
+    --error: #ff5468;
+    --claude-color: #d97757;
+    --gemini-color: #8ab4f8;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    background: var(--bg);
+    background: radial-gradient(ellipse at 50% -10%, #0c2230 0%, var(--bg) 60%);
     color: var(--ink);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    padding: 20px 16px;
+    padding: 16px 14px 22px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 18px;
+    gap: 14px;
     min-height: 100vh;
   }
-  h1 { font-size: 15px; font-weight: 700; margin: 0; }
-  .sub { font-size: 12px; color: var(--ink-soft); text-align: center; margin: 0; }
+  .mono { font-family: "SFMono-Regular", "Courier New", monospace; }
+
+  #hud-title {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-shadow: 0 0 8px rgba(41, 230, 255, 0.6);
+    font-weight: 700;
+  }
+  .sub {
+    font-size: 11px;
+    color: var(--ink-soft);
+    text-align: center;
+    margin: 0;
+    max-width: 280px;
+  }
+
+  #mode-row {
+    display: flex;
+    gap: 8px;
+  }
+  .mode-btn {
+    font-size: 11px;
+    font-family: inherit;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1px solid #26404f;
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .mode-btn[data-mode="claude"].active {
+    border-color: var(--claude-color);
+    color: var(--claude-color);
+    box-shadow: 0 0 10px rgba(217, 119, 87, 0.35) inset;
+  }
+  .mode-btn[data-mode="gemini"].active {
+    border-color: var(--gemini-color);
+    color: var(--gemini-color);
+    box-shadow: 0 0 10px rgba(138, 180, 248, 0.35) inset;
+  }
 
   #radar-wrap {
     position: relative;
-    width: 220px;
-    height: 220px;
+    width: 240px;
+    height: 240px;
     max-width: 100%;
+    margin: 4px 0;
   }
   #radar {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
+    cursor: pointer;
+  }
+  #radar:focus-visible {
+    outline: 1px solid var(--accent);
+    outline-offset: 4px;
   }
 
-  #mic-btn {
+  .telemetry {
+    position: absolute;
+    font-size: 9px;
+    line-height: 1.65;
+    color: rgba(111, 147, 168, 0.85);
+    letter-spacing: 0.5px;
+    pointer-events: none;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.9);
+    white-space: nowrap;
+  }
+  .telemetry b { color: rgba(41, 230, 255, 0.9); font-weight: 600; }
+  #telemetry-tl { top: 0; left: 0; text-align: left; }
+  #telemetry-bl { bottom: 0; left: 0; text-align: left; }
+
+  #state-tag {
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
-    width: 72px;
-    height: 72px;
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-    font-size: 28px;
-    background: var(--accent);
-    color: #fff;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
-    transition: background 0.15s ease, transform 0.1s ease;
-  }
-  #mic-btn:hover { transform: translate(-50%, -50%) scale(1.05); }
-  #mic-btn.listening { background: var(--listening); }
-  #mic-btn.speaking { background: var(--speaking); }
-  #mic-btn.error { background: var(--error); }
-
-  #state-tag {
+    transform: translate(-50%, 38px);
     font-family: "Courier New", monospace;
     font-size: 12px;
-    letter-spacing: 3px;
+    letter-spacing: 4px;
     font-weight: 700;
     color: var(--ink-soft);
     text-shadow: 0 0 6px currentColor;
+    pointer-events: none;
   }
   #state-tag.listening { color: var(--listening); }
   #state-tag.speaking { color: var(--speaking); }
+  #state-tag.keyword { color: var(--keyword); }
   #state-tag.error { color: var(--error); }
 
   #status {
-    font-size: 13px;
+    font-size: 12.5px;
     color: var(--ink-soft);
     text-align: center;
     min-height: 18px;
+    max-width: 280px;
   }
 
   #mic-permission-btn {
@@ -103,17 +154,45 @@
   }
   .log-item {
     background: var(--surface);
+    border: 1px solid var(--panel-border);
     border-radius: 8px;
     padding: 8px 10px;
     font-size: 12.5px;
     line-height: 1.5;
   }
   .log-item.user { color: var(--accent); }
-  .log-item.claude { color: var(--ink); }
+  .log-item.claude { color: var(--claude-color); }
+  .log-item.gemini { color: var(--gemini-color); }
 
-  #phrases-section {
+  #voice-settings {
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 10px 12px;
   }
+  .setting-row { display: flex; flex-direction: column; gap: 5px; }
+  .setting-row label {
+    font-size: 11px;
+    color: var(--ink-soft);
+    display: flex;
+    justify-content: space-between;
+  }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  select#voice-select {
+    width: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    border: 1px solid #26404f;
+    border-radius: 4px;
+    padding: 5px;
+    font-size: 11.5px;
+  }
+
+  #phrases-section { width: 100%; }
   .section-title {
     font-size: 12px;
     font-weight: 700;
@@ -130,7 +209,7 @@
     text-align: left;
     background: var(--surface);
     color: var(--ink);
-    border: 1px solid #3a3733;
+    border: 1px solid var(--panel-border);
     border-radius: 6px;
     padding: 7px 10px;
     font-size: 12px;
@@ -145,7 +224,7 @@
     font-size: 11px;
     background: var(--surface);
     color: var(--ink);
-    border: 1px solid #3a3733;
+    border: 1px solid var(--panel-border);
     border-radius: 4px;
     font-family: inherit;
     resize: vertical;
@@ -155,7 +234,8 @@
     font-size: 11px;
     padding: 4px 10px;
     background: var(--accent);
-    color: #fff;
+    color: #04222b;
+    font-weight: 700;
     border: none;
     border-radius: 4px;
     cursor: pointer;
@@ -174,25 +254,42 @@
     font-size: 11px;
     background: var(--surface);
     color: var(--ink);
-    border: 1px solid #3a3733;
+    border: 1px solid var(--panel-border);
     border-radius: 4px;
   }
 </style>
 </head>
 <body>
 
-  <h1>🎤 Claude Voice Bridge</h1>
-  <p class="sub">マイクを押すと話しかけられます。話し終えると自動でclaude.aiへ送信・応答を読み上げます。</p>
+  <div id="hud-title">V.B. TACTICAL LINK</div>
+  <p class="sub">オーブをクリックで起動。「Claude」または「Gemini」と呼びかけると、そのAIに切り替わって会話が始まります。</p>
+
+  <div id="mode-row">
+    <button class="mode-btn" id="mode-claude-btn" data-mode="claude" type="button">CLAUDE</button>
+    <button class="mode-btn" id="mode-gemini-btn" data-mode="gemini" type="button">GEMINI</button>
+  </div>
 
   <div id="radar-wrap">
-    <canvas id="radar" width="220" height="220"></canvas>
-    <button id="mic-btn" title="クリックで音声会話モードの開始/停止">🎤</button>
+    <canvas id="radar" width="240" height="240" role="button" tabindex="0" aria-label="クリックで音声リンクの開始/停止"></canvas>
+    <div class="telemetry mono" id="telemetry-tl"></div>
+    <div class="telemetry mono" id="telemetry-bl"></div>
+    <div id="state-tag">IDLE</div>
   </div>
-  <div id="state-tag">IDLE</div>
-  <div id="status">停止中</div>
-  <button id="mic-permission-btn" type="button" style="display:none">🎤 マイクの許可ページを開く</button>
+  <div id="status">停止中(オーブをクリックして開始)</div>
+  <button id="mic-permission-btn" type="button" style="display:none">マイクの許可ページを開く</button>
 
   <div id="log"></div>
+
+  <div id="voice-settings">
+    <div class="setting-row">
+      <label>読み上げ速度 <span id="rate-value">1.0x</span></label>
+      <input type="range" id="rate-slider" min="0.5" max="2" step="0.1" value="1">
+    </div>
+    <div class="setting-row">
+      <label>読み上げ音声</label>
+      <select id="voice-select"></select>
+    </div>
+  </div>
 
   <div id="phrases-section">
     <div class="section-title">📌 定例文(押すと入力欄に反映、送信は自分で押す)</div>
