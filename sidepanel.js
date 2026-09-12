@@ -360,8 +360,14 @@
   function renderTracker() {
     const tracker = window.TrackerStore.getData();
     trackerTbodyEl.innerHTML = "";
-    const consultNums = Object.keys(tracker.consultations).sort();
-    const taskNums = Object.keys(tracker.tasks).sort();
+    // 表示は「対応中(status!=="done")」のみ。完了・解決済みはJSON(chrome.storage.local)
+    // には残すが表には出さない(2026-09-12、ユーザー指示)。
+    const consultNums = Object.keys(tracker.consultations)
+      .filter((num) => tracker.consultations[num].status !== "done")
+      .sort();
+    const taskNums = Object.keys(tracker.tasks)
+      .filter((num) => tracker.tasks[num].status !== "done")
+      .sort();
 
     consultNums.forEach((num) => {
       const item = tracker.consultations[num];
@@ -375,7 +381,7 @@
       const btn = document.createElement("button");
       btn.className = "tracker-dismiss";
       btn.textContent = "✕";
-      btn.title = "解決済みとして削除";
+      btn.title = "解決済みにする(表示から外す。データは残る)";
       btn.onclick = () => window.TrackerStore.dismissConsultation(num);
       tr.lastElementChild.appendChild(btn);
       trackerTbodyEl.appendChild(tr);
@@ -393,7 +399,7 @@
       const btn = document.createElement("button");
       btn.className = "tracker-dismiss";
       btn.textContent = "✕";
-      btn.title = "一覧から削除";
+      btn.title = "対応中から外す(表示から外す。データは残る)";
       btn.onclick = () => window.TrackerStore.dismissTask(num);
       tr.lastElementChild.appendChild(btn);
       trackerTbodyEl.appendChild(tr);
@@ -411,6 +417,9 @@
       const responseText = msg.text || "(応答テキストを取得できませんでした)";
       addLog(mode, responseText);
       window.TrackerStore.scan(responseText);
+      // マーカーの有無に関わらず、捕捉できた発言は全文をJSONに逐次追記して残す
+      // (2026-09-12、ユーザー指示「全て拾え」)。
+      window.RoomLogStore.append({ text: responseText, source: "active", mode });
       estTokens += Math.round(responseText.length / 4);
       speak(responseText, () => {
         if (active) {
@@ -422,9 +431,11 @@
       });
     } else if (msg.type === "cvb-passive-message") {
       // 声で操作していない別タブ(workerルーム等)からの常時監視による通知。
-      // トラッカーのマーカー検出にのみ使い、ログ表示・読み上げはしない
-      // (2026-09-12、ユーザー指示「workerルームへの依頼もこの表に出してほしい」)。
+      // ログ表示・読み上げはしないが、トラッカーのマーカー検出と、全文のJSON記録
+      // (RoomLogStore)の両方に使う(2026-09-12、ユーザー指示「workerルームへの依頼も
+      // この表に出してほしい」「マーカーの有無に関わらず全て拾え」)。
       window.TrackerStore.scan(msg.text || "");
+      window.RoomLogStore.append({ text: msg.text || "", source: "passive", title: msg.title || "", url: msg.url || "" });
     }
   });
 
@@ -775,6 +786,7 @@
     updateModeUI();
 
     await window.TrackerStore.load(); // renderTrackerはonChangeで自動的に呼ばれる
+    await window.RoomLogStore.load();
 
     rate = typeof stored.cvb_rate === "number" ? stored.cvb_rate : 1.0;
     rateSliderEl.value = String(rate);
