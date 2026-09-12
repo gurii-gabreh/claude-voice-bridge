@@ -341,6 +341,22 @@
   const trackerSectionEl = document.getElementById("tracker-section");
   const trackerTbodyEl = document.getElementById("tracker-tbody");
 
+  function renderBulletCell(cellEl, bullets) {
+    cellEl.innerHTML = "";
+    if (!bullets || !bullets.length) {
+      cellEl.textContent = "(内容不明)";
+      return;
+    }
+    const ul = document.createElement("ul");
+    ul.className = "tracker-bullets";
+    bullets.forEach((line) => {
+      const li = document.createElement("li");
+      li.textContent = line;
+      ul.appendChild(li);
+    });
+    cellEl.appendChild(ul);
+  }
+
   function renderTracker() {
     const tracker = window.TrackerStore.getData();
     trackerTbodyEl.innerHTML = "";
@@ -355,7 +371,7 @@
         `<td class="tracker-text"></td>` +
         `<td><span class="tracker-badge waiting">回答待ち</span></td>` +
         `<td></td>`;
-      tr.querySelector(".tracker-text").textContent = item.snippet || "(内容不明)";
+      renderBulletCell(tr.querySelector(".tracker-text"), item.bullets);
       const btn = document.createElement("button");
       btn.className = "tracker-dismiss";
       btn.textContent = "✕";
@@ -373,7 +389,7 @@
         `<td class="tracker-text"></td>` +
         `<td><span class="tracker-badge working">作業中</span></td>` +
         `<td></td>`;
-      tr.querySelector(".tracker-text").textContent = item.snippet || "(内容不明)";
+      renderBulletCell(tr.querySelector(".tracker-text"), item.bullets);
       const btn = document.createElement("button");
       btn.className = "tracker-dismiss";
       btn.textContent = "✕";
@@ -404,6 +420,11 @@
           setStatus("停止中(オーブをクリックして開始)");
         }
       });
+    } else if (msg.type === "cvb-passive-message") {
+      // 声で操作していない別タブ(workerルーム等)からの常時監視による通知。
+      // トラッカーのマーカー検出にのみ使い、ログ表示・読み上げはしない
+      // (2026-09-12、ユーザー指示「workerルームへの依頼もこの表に出してほしい」)。
+      window.TrackerStore.scan(msg.text || "");
     }
   });
 

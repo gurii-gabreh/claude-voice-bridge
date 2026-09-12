@@ -260,4 +260,43 @@
     }
     return false;
   });
+
+  // ---- 常時監視(声で操作していない別タブの内容も、トラッカー表に反映するため) ----
+  // 2026-09-12追加: 「workerルーム等、他のルームへの依頼もこの表に出してほしい」という
+  // ユーザー指示のため追加。上のwaitForResponse(声で送信した直後の応答待ち、ログ表示・
+  // 読み上げ用)とは完全に別の仕組みで、このタブが開かれている間ずっと動く。
+  // ここで拾った内容は「cvb-passive-message」としてサイドパネルへ送り、トラッカーの
+  // マーカー検出にのみ使う(ログ表示・読み上げはしない。それらは音声操作した
+  // アクティブタブのcvb-response-ready経路のみで行う)。
+  let passiveSeenCount = 0;
+  let passiveDebounceTimer = null;
+
+  function passiveCheckAndSend() {
+    const blocks = findMessageBlocks();
+    if (blocks.length <= passiveSeenCount) return;
+    const newBlocks = blocks.slice(passiveSeenCount);
+    passiveSeenCount = blocks.length;
+    const text = newBlocks.map((b) => b.textContent.trim()).filter(Boolean).join("\n");
+    if (!text) return;
+    chrome.runtime.sendMessage(
+      { type: "cvb-passive-message", text, title: document.title, url: location.href },
+      () => {
+        if (chrome.runtime.lastError) {
+          // サイドパネルが閉じている間は届かないだけなので無視してよい
+        }
+      }
+    );
+  }
+
+  function startPassiveWatch() {
+    passiveSeenCount = findMessageBlocks().length; // 監視開始時点の既存発言は対象外
+    const root = document.querySelector("main") || document.body;
+    const observer = new MutationObserver(() => {
+      clearTimeout(passiveDebounceTimer);
+      passiveDebounceTimer = setTimeout(passiveCheckAndSend, 1500);
+    });
+    observer.observe(root, { childList: true, subtree: true, characterData: true });
+    console.info(`[cvb:${SITE}] startPassiveWatch: 常時監視を開始(baseline=${passiveSeenCount}件)`);
+  }
+  startPassiveWatch();
 })();
