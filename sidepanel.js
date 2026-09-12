@@ -333,67 +333,16 @@
     }
   }
 
-  // ---- 相談・処理タスクの自動検出(見逃し防止トラッカー) ----
-  // CLAUDE.mdルール14の【相談NNN】【処理開始NNN】【処理完了NNN】マーカーを
-  // 応答テキストから拾い、表として一覧表示する。応答を受信するたび(=解答が
-  // 終わるたび)に自動で走査・表を更新する(下のcvb-response-readyハンドラ参照)。
-  //
-  // 【相談】は「回答待ち」として表示し続ける。自然文の返答だけでは自動的に
-  // 「解決した」と判定できないため、ユーザーが内容を見て手動で「✕」を押すまで消えない。
-  // 【処理開始】は「作業中」として表示し、同じ番号の【処理完了】が来ると
-  // 自動的に一覧から削除される(開始を聞き逃していても完了だけは一度表示してから消える)。
-  const tracker = { consultations: {}, tasks: {} };
+  // ---- 相談・処理タスクの見逃し防止トラッカー(表示のみ) ----
+  // CLAUDE.mdルール14の【相談NNN】【処理開始NNN】【処理完了NNN】マーカーの検出・
+  // 状態管理(データ)はtracker-store.js(TrackerStore)側に分離した。
+  // ここ(sidepanel.js)はTrackerStore.getData()が返すJSONを描画するだけにする
+  // (2026-09-12、ユーザー指示「一覧のところだけjson化し、サイドパネルは見せるだけにしろ」)。
   const trackerSectionEl = document.getElementById("tracker-section");
   const trackerTbodyEl = document.getElementById("tracker-tbody");
 
-  function scanForMarkers(text) {
-    if (!text) return;
-    const re = /【(相談|処理開始|処理完了)(\d{3})】/g;
-    let m;
-    while ((m = re.exec(text)) !== null) {
-      const kind = m[1];
-      const num = m[2];
-      const after = text.slice(m.index + m[0].length).trim();
-      const snippet = after.slice(0, 60).replace(/\s+/g, " ");
-      const now = Date.now();
-      if (kind === "相談") {
-        if (!tracker.consultations[num]) {
-          tracker.consultations[num] = { snippet, firstSeen: now };
-        } else {
-          tracker.consultations[num].snippet = snippet;
-        }
-      } else if (kind === "処理開始") {
-        if (!tracker.tasks[num]) {
-          tracker.tasks[num] = { snippet, startedAt: now };
-        } else {
-          tracker.tasks[num].snippet = snippet;
-        }
-      } else if (kind === "処理完了") {
-        // 完了したタスクは一覧から自動削除する(ユーザー指示、2026-09-12)
-        delete tracker.tasks[num];
-      }
-    }
-    saveTracker();
-    renderTracker();
-  }
-
-  function saveTracker() {
-    chrome.storage.local.set({ cvb_tracker: tracker });
-  }
-
-  function dismissConsultation(num) {
-    delete tracker.consultations[num];
-    saveTracker();
-    renderTracker();
-  }
-
-  function dismissTask(num) {
-    delete tracker.tasks[num];
-    saveTracker();
-    renderTracker();
-  }
-
   function renderTracker() {
+    const tracker = window.TrackerStore.getData();
     trackerTbodyEl.innerHTML = "";
     const consultNums = Object.keys(tracker.consultations).sort();
     const taskNums = Object.keys(tracker.tasks).sort();
@@ -411,7 +360,7 @@
       btn.className = "tracker-dismiss";
       btn.textContent = "✕";
       btn.title = "解決済みとして削除";
-      btn.onclick = () => dismissConsultation(num);
+      btn.onclick = () => window.TrackerStore.dismissConsultation(num);
       tr.lastElementChild.appendChild(btn);
       trackerTbodyEl.appendChild(tr);
     });
@@ -429,7 +378,7 @@
       btn.className = "tracker-dismiss";
       btn.textContent = "✕";
       btn.title = "一覧から削除";
-      btn.onclick = () => dismissTask(num);
+      btn.onclick = () => window.TrackerStore.dismissTask(num);
       tr.lastElementChild.appendChild(btn);
       trackerTbodyEl.appendChild(tr);
     });
@@ -437,13 +386,15 @@
     trackerSectionEl.classList.toggle("has-items", consultNums.length + taskNums.length > 0);
   }
 
+  window.TrackerStore.onChange(renderTracker);
+
   // content.jsからの「応答が準備できた」通知を待つ
   chrome.runtime.onMessage.addListener((msg) => {
     console.log("[cvb-panel] onMessage受信:", msg.type, msg);
     if (msg.type === "cvb-response-ready") {
       const responseText = msg.text || "(応答テキストを取得できませんでした)";
       addLog(mode, responseText);
-      scanForMarkers(responseText);
+      window.TrackerStore.scan(responseText);
       estTokens += Math.round(responseText.length / 4);
       speak(responseText, () => {
         if (active) {
@@ -798,15 +749,11 @@
 
   // ---- 初期化 ----
   async function init() {
-    const stored = await chrome.storage.local.get(["cvb_mode", "cvb_rate", "cvb_voice_name", "cvb_tracker"]);
+    const stored = await chrome.storage.local.get(["cvb_mode", "cvb_rate", "cvb_voice_name"]);
     if (stored.cvb_mode === "claude" || stored.cvb_mode === "gemini") mode = stored.cvb_mode;
     updateModeUI();
 
-    if (stored.cvb_tracker) {
-      tracker.consultations = stored.cvb_tracker.consultations || {};
-      tracker.tasks = stored.cvb_tracker.tasks || {};
-      renderTracker();
-    }
+    await window.TrackerStore.load(); // renderTrackerはonChangeで自動的に呼ばれる
 
     rate = typeof stored.cvb_rate === "number" ? stored.cvb_rate : 1.0;
     rateSliderEl.value = String(rate);
