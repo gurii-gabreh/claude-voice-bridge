@@ -144,6 +144,59 @@
     cursor: pointer;
   }
 
+  #tracker-section {
+    width: 100%;
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+  #tracker-section.has-items { display: flex; }
+  #tracker-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .tracker-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    background: var(--bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 11.5px;
+    line-height: 1.5;
+  }
+  .tracker-item.done { opacity: 0.55; }
+  .tracker-badge {
+    flex: 0 0 auto;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .tracker-badge.open { background: rgba(255,84,104,0.18); color: var(--error); }
+  .tracker-badge.in_progress { background: rgba(77,168,255,0.18); color: var(--speaking); }
+  .tracker-badge.done { background: rgba(46,230,160,0.18); color: var(--listening); }
+  .tracker-text { flex: 1 1 auto; color: var(--ink); }
+  .tracker-item.done .tracker-text { text-decoration: line-through; }
+  .tracker-dismiss {
+    flex: 0 0 auto;
+    background: none;
+    border: 1px solid var(--panel-border);
+    color: var(--ink-soft);
+    border-radius: 4px;
+    font-size: 10px;
+    padding: 1px 6px;
+    cursor: pointer;
+  }
+  .tracker-dismiss:hover { border-color: var(--accent); color: var(--accent); }
+
   #log {
     width: 100%;
     flex: 1 1 auto;
@@ -277,6 +330,11 @@
   </div>
   <div id="status">停止中(オーブをクリックして開始)</div>
   <button id="mic-permission-btn" type="button" style="display:none">マイクの許可ページを開く</button>
+
+  <div id="tracker-section">
+    <div class="section-title">📋 未解決の相談・進行中のタスク(見逃し防止)</div>
+    <div id="tracker-list"></div>
+  </div>
 
   <div id="log"></div>
 

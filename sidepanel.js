@@ -333,12 +333,114 @@
     }
   }
 
+  // ---- 相談・処理タスクの自動検出(見逃し防止トラッカー) ----
+  // CLAUDE.mdルール14の【相談NNN】【処理開始NNN】【処理完了NNN】マーカーを
+  // 応答テキストから拾い、サイドパネル上部に「未解決」として残し続ける。
+  // 【相談】は自動では解決判定できない(自然文の返答からは確実に判別できないため)、
+  // ユーザーが手動で✕を押すまで残る。【処理開始】→【処理完了】は同じ番号で
+  // 自動的にペアリングして完了扱いにする。
+  const tracker = { consultations: {}, tasks: {} };
+  const trackerSectionEl = document.getElementById("tracker-section");
+  const trackerListEl = document.getElementById("tracker-list");
+
+  function scanForMarkers(text) {
+    if (!text) return;
+    const re = /【(相談|処理開始|処理完了)(\d{3})】/g;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      const kind = m[1];
+      const num = m[2];
+      const after = text.slice(m.index + m[0].length).trim();
+      const snippet = after.slice(0, 60).replace(/\s+/g, " ");
+      const now = Date.now();
+      if (kind === "相談") {
+        if (!tracker.consultations[num]) {
+          tracker.consultations[num] = { snippet, status: "open", firstSeen: now };
+        } else {
+          tracker.consultations[num].snippet = snippet;
+        }
+      } else if (kind === "処理開始") {
+        if (!tracker.tasks[num]) {
+          tracker.tasks[num] = { snippet, status: "in_progress", startedAt: now };
+        } else if (tracker.tasks[num].status !== "done") {
+          tracker.tasks[num].snippet = snippet;
+        }
+      } else if (kind === "処理完了") {
+        if (tracker.tasks[num]) {
+          tracker.tasks[num].status = "done";
+          tracker.tasks[num].snippet = snippet || tracker.tasks[num].snippet;
+          tracker.tasks[num].endedAt = now;
+        } else {
+          // 開始のマーカーを見逃していた場合でも、完了だけは記録する
+          tracker.tasks[num] = { snippet, status: "done", startedAt: now, endedAt: now };
+        }
+      }
+    }
+    saveTracker();
+    renderTracker();
+  }
+
+  function saveTracker() {
+    chrome.storage.local.set({ cvb_tracker: tracker });
+  }
+
+  function dismissConsultation(num) {
+    delete tracker.consultations[num];
+    saveTracker();
+    renderTracker();
+  }
+
+  function dismissTask(num) {
+    delete tracker.tasks[num];
+    saveTracker();
+    renderTracker();
+  }
+
+  function renderTracker() {
+    trackerListEl.innerHTML = "";
+    const consultNums = Object.keys(tracker.consultations).sort();
+    const taskNums = Object.keys(tracker.tasks).sort();
+
+    consultNums.forEach((num) => {
+      const item = tracker.consultations[num];
+      const row = document.createElement("div");
+      row.className = "tracker-item";
+      row.innerHTML = `<span class="tracker-badge open">相談${num}</span><span class="tracker-text"></span>`;
+      row.querySelector(".tracker-text").textContent = item.snippet || "(内容不明)";
+      const btn = document.createElement("button");
+      btn.className = "tracker-dismiss";
+      btn.textContent = "✕ 解決";
+      btn.onclick = () => dismissConsultation(num);
+      row.appendChild(btn);
+      trackerListEl.appendChild(row);
+    });
+
+    taskNums.forEach((num) => {
+      const item = tracker.tasks[num];
+      const row = document.createElement("div");
+      row.className = "tracker-item" + (item.status === "done" ? " done" : "");
+      const badgeClass = item.status === "done" ? "done" : "in_progress";
+      const badgeLabel = item.status === "done" ? `処理完了${num}` : `処理中${num}`;
+      row.innerHTML = `<span class="tracker-badge ${badgeClass}">${badgeLabel}</span><span class="tracker-text"></span>`;
+      row.querySelector(".tracker-text").textContent = item.snippet || "(内容不明)";
+      const btn = document.createElement("button");
+      btn.className = "tracker-dismiss";
+      btn.textContent = "✕";
+      btn.onclick = () => dismissTask(num);
+      row.appendChild(btn);
+      trackerListEl.appendChild(row);
+    });
+
+    trackerSectionEl.classList.toggle("has-items", consultNums.length + taskNums.length > 0);
+  }
+
   // content.jsからの「応答が準備できた」通知を待つ
   chrome.runtime.onMessage.addListener((msg) => {
     console.log("[cvb-panel] onMessage受信:", msg.type, msg);
     if (msg.type === "cvb-response-ready") {
       const responseText = msg.text || "(応答テキストを取得できませんでした)";
       addLog(mode, responseText);
+      scanForMarkers(responseText);
       estTokens += Math.round(responseText.length / 4);
       speak(responseText, () => {
         if (active) {
@@ -693,9 +795,15 @@
 
   // ---- 初期化 ----
   async function init() {
-    const stored = await chrome.storage.local.get(["cvb_mode", "cvb_rate", "cvb_voice_name"]);
+    const stored = await chrome.storage.local.get(["cvb_mode", "cvb_rate", "cvb_voice_name", "cvb_tracker"]);
     if (stored.cvb_mode === "claude" || stored.cvb_mode === "gemini") mode = stored.cvb_mode;
     updateModeUI();
+
+    if (stored.cvb_tracker) {
+      tracker.consultations = stored.cvb_tracker.consultations || {};
+      tracker.tasks = stored.cvb_tracker.tasks || {};
+      renderTracker();
+    }
 
     rate = typeof stored.cvb_rate === "number" ? stored.cvb_rate : 1.0;
     rateSliderEl.value = String(rate);
