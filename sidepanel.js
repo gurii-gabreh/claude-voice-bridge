@@ -335,13 +335,16 @@
 
   // ---- 相談・処理タスクの自動検出(見逃し防止トラッカー) ----
   // CLAUDE.mdルール14の【相談NNN】【処理開始NNN】【処理完了NNN】マーカーを
-  // 応答テキストから拾い、サイドパネル上部に「未解決」として残し続ける。
-  // 【相談】は自動では解決判定できない(自然文の返答からは確実に判別できないため)、
-  // ユーザーが手動で✕を押すまで残る。【処理開始】→【処理完了】は同じ番号で
-  // 自動的にペアリングして完了扱いにする。
+  // 応答テキストから拾い、表として一覧表示する。応答を受信するたび(=解答が
+  // 終わるたび)に自動で走査・表を更新する(下のcvb-response-readyハンドラ参照)。
+  //
+  // 【相談】は「回答待ち」として表示し続ける。自然文の返答だけでは自動的に
+  // 「解決した」と判定できないため、ユーザーが内容を見て手動で「✕」を押すまで消えない。
+  // 【処理開始】は「作業中」として表示し、同じ番号の【処理完了】が来ると
+  // 自動的に一覧から削除される(開始を聞き逃していても完了だけは一度表示してから消える)。
   const tracker = { consultations: {}, tasks: {} };
   const trackerSectionEl = document.getElementById("tracker-section");
-  const trackerListEl = document.getElementById("tracker-list");
+  const trackerTbodyEl = document.getElementById("tracker-tbody");
 
   function scanForMarkers(text) {
     if (!text) return;
@@ -355,25 +358,19 @@
       const now = Date.now();
       if (kind === "相談") {
         if (!tracker.consultations[num]) {
-          tracker.consultations[num] = { snippet, status: "open", firstSeen: now };
+          tracker.consultations[num] = { snippet, firstSeen: now };
         } else {
           tracker.consultations[num].snippet = snippet;
         }
       } else if (kind === "処理開始") {
         if (!tracker.tasks[num]) {
-          tracker.tasks[num] = { snippet, status: "in_progress", startedAt: now };
-        } else if (tracker.tasks[num].status !== "done") {
+          tracker.tasks[num] = { snippet, startedAt: now };
+        } else {
           tracker.tasks[num].snippet = snippet;
         }
       } else if (kind === "処理完了") {
-        if (tracker.tasks[num]) {
-          tracker.tasks[num].status = "done";
-          tracker.tasks[num].snippet = snippet || tracker.tasks[num].snippet;
-          tracker.tasks[num].endedAt = now;
-        } else {
-          // 開始のマーカーを見逃していた場合でも、完了だけは記録する
-          tracker.tasks[num] = { snippet, status: "done", startedAt: now, endedAt: now };
-        }
+        // 完了したタスクは一覧から自動削除する(ユーザー指示、2026-09-12)
+        delete tracker.tasks[num];
       }
     }
     saveTracker();
@@ -397,38 +394,44 @@
   }
 
   function renderTracker() {
-    trackerListEl.innerHTML = "";
+    trackerTbodyEl.innerHTML = "";
     const consultNums = Object.keys(tracker.consultations).sort();
     const taskNums = Object.keys(tracker.tasks).sort();
 
     consultNums.forEach((num) => {
       const item = tracker.consultations[num];
-      const row = document.createElement("div");
-      row.className = "tracker-item";
-      row.innerHTML = `<span class="tracker-badge open">相談${num}</span><span class="tracker-text"></span>`;
-      row.querySelector(".tracker-text").textContent = item.snippet || "(内容不明)";
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        `<td class="tracker-num">相談${num}</td>` +
+        `<td class="tracker-text"></td>` +
+        `<td><span class="tracker-badge waiting">回答待ち</span></td>` +
+        `<td></td>`;
+      tr.querySelector(".tracker-text").textContent = item.snippet || "(内容不明)";
       const btn = document.createElement("button");
       btn.className = "tracker-dismiss";
-      btn.textContent = "✕ 解決";
+      btn.textContent = "✕";
+      btn.title = "解決済みとして削除";
       btn.onclick = () => dismissConsultation(num);
-      row.appendChild(btn);
-      trackerListEl.appendChild(row);
+      tr.lastElementChild.appendChild(btn);
+      trackerTbodyEl.appendChild(tr);
     });
 
     taskNums.forEach((num) => {
       const item = tracker.tasks[num];
-      const row = document.createElement("div");
-      row.className = "tracker-item" + (item.status === "done" ? " done" : "");
-      const badgeClass = item.status === "done" ? "done" : "in_progress";
-      const badgeLabel = item.status === "done" ? `処理完了${num}` : `処理中${num}`;
-      row.innerHTML = `<span class="tracker-badge ${badgeClass}">${badgeLabel}</span><span class="tracker-text"></span>`;
-      row.querySelector(".tracker-text").textContent = item.snippet || "(内容不明)";
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        `<td class="tracker-num">作業${num}</td>` +
+        `<td class="tracker-text"></td>` +
+        `<td><span class="tracker-badge working">作業中</span></td>` +
+        `<td></td>`;
+      tr.querySelector(".tracker-text").textContent = item.snippet || "(内容不明)";
       const btn = document.createElement("button");
       btn.className = "tracker-dismiss";
       btn.textContent = "✕";
+      btn.title = "一覧から削除";
       btn.onclick = () => dismissTask(num);
-      row.appendChild(btn);
-      trackerListEl.appendChild(row);
+      tr.lastElementChild.appendChild(btn);
+      trackerTbodyEl.appendChild(tr);
     });
 
     trackerSectionEl.classList.toggle("has-items", consultNums.length + taskNums.length > 0);
