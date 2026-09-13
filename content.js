@@ -100,11 +100,30 @@
       }
     }
     const root = document.querySelector("main") || document.body;
-    const matched = Array.from(root.querySelectorAll("div, article")).filter((el) => {
+    let candidates = Array.from(root.querySelectorAll("div, article")).filter((el) => {
       const text = el.textContent || "";
       return text.trim().length > 20 && text.trim().length < 20000;
     });
-    console.info(`[cvb:${SITE}] findMessageBlocks: 自動検出(div,article)で${matched.length}件`);
+    // 入れ子になった要素(親が子の内容をまるごと含んでいる場合)は内側(子)だけ残し、
+    // 同じ内容が親・子の両方で二重に数えられるのを防ぐ(2026-09-13、ユーザー指摘
+    // 「抽出結果が重複だらけで使い物にならない」への対応。特にclaude.ai/codeの
+    // ような複雑な画面構成でduplicateが目立っていた)。
+    const beforeCount = candidates.length;
+    candidates = candidates.filter(
+      (el) => !candidates.some((other) => other !== el && el.contains(other))
+    );
+    // 仮想化・アクセシビリティ用の隠し複製など、DOM構造は別でも中身が完全一致する
+    // 要素も重複としてまとめて除去する。
+    const seenText = new Set();
+    const matched = candidates.filter((el) => {
+      const text = (el.textContent || "").trim();
+      if (seenText.has(text)) return false;
+      seenText.add(text);
+      return true;
+    });
+    console.info(
+      `[cvb:${SITE}] findMessageBlocks: 自動検出で${matched.length}件(重複除去前${beforeCount}件)`
+    );
     return matched;
   }
 
