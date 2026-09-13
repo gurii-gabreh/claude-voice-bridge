@@ -70,8 +70,11 @@
   // urlは「ルームID」として裏で保持するだけで、表には出さない
   // (2026-09-13、ユーザー指示「表示はしなくていいから、ルームのIDも裏では
   // もっておいてほしい」)。表示用の短いラベルはsidepanel.js側でmode/titleから作る。
+  // 戻り値: 検出したマーカーの件数(呼び出し側で「何件検出したか」を
+  // ユーザーに伝えるため。2026-09-13追加、ユーザー指摘「『抽出しました』しか
+  // 出ないけど」への対応。0件の場合と区別できるようにする)。
   function scan(text, source) {
-    if (!text) return;
+    if (!text) return 0;
     const re = /【(相談|処理開始|処理完了)(\d{3})】/g;
     const matches = Array.from(text.matchAll(re));
     const now = Date.now();
@@ -116,6 +119,7 @@
     });
     save();
     notify();
+    return matches.length;
   }
 
   // ✕ボタンでの手動解決/手動終了。削除はせず、status: "done" にして

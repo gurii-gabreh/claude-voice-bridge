@@ -115,10 +115,14 @@
       const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-extract-room-text" });
       if (res && res.ok && res.text) {
         const source = { mode, title: res.title || "", url: res.url || "" };
-        window.TrackerStore.scan(res.text, source);
+        const foundCount = window.TrackerStore.scan(res.text, source);
         window.RoomLogStore.append({ text: res.text, source: "manual-extract", mode });
         syncKnowledgeToGithub(res.text, source);
-        setStatus(`ルーム内のマーカーを抽出しました(${SITE_LABELS[mode]})`);
+        if (foundCount > 0) {
+          setStatus(`${SITE_LABELS[mode]}: マーカーを${foundCount}件検出しました`);
+        } else {
+          setStatus(`${SITE_LABELS[mode]}: マーカー(【相談】【処理開始】【処理完了】)は見つかりませんでした(表は更新されません)`, "error");
+        }
       } else {
         setStatus("抽出できるテキストが見つかりませんでした", "error");
       }
