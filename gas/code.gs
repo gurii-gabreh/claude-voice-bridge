@@ -1,5 +1,5 @@
 /**
- * claude-voice-bridge — トラッカーのGitHub同期リレー(Google Apps Script Web App)
+ * claude-voice-bridge — GitHub同期リレー(Google Apps Script Web App)
  *
  * 経緯(2026-09-13、ユーザー指示):
  * サイドパネルのトラッカー(相談・作業タスク一覧)はchrome.storage.localのみに
@@ -13,10 +13,17 @@
  * 方針をユーザーが選択)。PATもclaude-voice-bridgeリポジトリのみのアクセス権限で
  * 発行し、study-app用PATとは分離する(最小権限・影響範囲の分離のため)。
  *
- * 同期は自動ではなく、サイドパネルの「☁️ GitHubへ同期」ボタンを押した時だけ、
- * その時点のトラッカー全体(TrackerStore.getData())をまるごと上書き保存する
- * 単純な方式(継続的な自動同期にすると、常時監視で頻繁に更新されるデータの
- * 度に大量のcommitが発生してしまうため、あえて手動トリガーのみにしている)。
+ * このGASは2つのアクションを扱う:
+ * 1. saveTracker: 「☁️ GitHubへ同期」ボタンを押した時だけ、その時点のトラッカー
+ *    全体(TrackerStore.getData())をdata/tracker.jsonへまるごと上書き保存する
+ *    (継続的な自動同期にすると、常時監視で頻繁に更新されるデータの度に大量の
+ *    commitが発生してしまうため、あえて手動トリガーのみにしている)。
+ * 2. saveKnowledge: 「🔍 ルームタスク一覧を抽出」ボタンを押した時、その1回分の
+ *    抽出結果(要約せず全文)をdata/knowledge-log.jsonへ1件追記する(study-appの
+ *    saveHistory_と同じ、1件ずつ追記するパターン。ボタンを押すたびに全件を
+ *    まるごと送るとcommitがどんどん肥大化するため、あえて1件ずつにしている)。
+ *    音声応答(Voiceモード)・常時監視からはこのアクションは呼ばない(2026-09-13、
+ *    ユーザー指示「Voiceモードは今まで通りに」「音声は除外してよい」)。
  *
  * ---- デプロイ手順 ----
  * 1. https://script.google.com で新規プロジェクトを作成し、このファイルの内容を貼る。
@@ -34,6 +41,7 @@
 
 const GITHUB_API = 'https://api.github.com';
 const TRACKER_PATH = 'data/tracker.json';
+const KNOWLEDGE_LOG_PATH = 'data/knowledge-log.json';
 
 function getConfig_() {
   const p = PropertiesService.getScriptProperties();
@@ -56,6 +64,26 @@ function ghGetSha_(path) {
     throw new Error(`GET ${path} failed: ${res.getResponseCode()} ${res.getContentText()}`);
   }
   return JSON.parse(res.getContentText()).sha;
+}
+
+// saveKnowledge_のように既存の中身に追記する場合はこちら(sha+パース済みJSON)を使う。
+// saveTracker_のように毎回まるごと上書きするだけの場合はghGetSha_で十分。
+function ghGetJson_(path) {
+  const cfg = getConfig_();
+  const url = `${GITHUB_API}/repos/${cfg.owner}/${cfg.repo}/contents/${path}`;
+  const res = UrlFetchApp.fetch(url, {
+    headers: { Authorization: `Bearer ${cfg.token}`, Accept: 'application/vnd.github+json' },
+    muteHttpExceptions: true,
+  });
+  if (res.getResponseCode() === 404) return { sha: null, data: null }; // ファイルがまだ無い(初回)
+  if (res.getResponseCode() !== 200) {
+    throw new Error(`GET ${path} failed: ${res.getResponseCode()} ${res.getContentText()}`);
+  }
+  const json = JSON.parse(res.getContentText());
+  const content = Utilities.newBlob(
+    Utilities.base64Decode(json.content.replace(/\n/g, ''))
+  ).getDataAsString('utf-8');
+  return { sha: json.sha, data: JSON.parse(content) };
 }
 
 function ghPut_(path, dataObj, sha, message) {
@@ -101,12 +129,30 @@ function saveTracker_(tracker) {
   });
 }
 
+// 「🔍 ルームタスク一覧を抽出」ボタン1回分の抽出結果(要約せず全文)を、
+// data/knowledge-log.jsonのentries配列へ1件だけ追記する(study-appのsaveHistory_と
+// 同じ、1件ずつ追記するパターン。まるごと送り直すとcommitが肥大化し続けるため)。
+function saveKnowledge_(entry) {
+  return withRetry_(() => {
+    const { sha, data } = ghGetJson_(KNOWLEDGE_LOG_PATH);
+    const knowledge = data || { entries: [] };
+    knowledge.entries = knowledge.entries || [];
+    const idx = knowledge.entries.findIndex((e) => e.id === entry.id);
+    if (idx >= 0) knowledge.entries[idx] = entry; // 同じidの再送(通信リトライ等)は上書き
+    else knowledge.entries.push(entry);
+    ghPut_(KNOWLEDGE_LOG_PATH, knowledge, sha, `knowledge: ${entry.room && entry.room.title || entry.id}`);
+  });
+}
+
 function doPost(e) {
   let result = { status: 'error', message: 'unknown action' };
   try {
     const body = JSON.parse(e.postData.contents);
     if (body.action === 'saveTracker') {
       saveTracker_(body.tracker || {});
+      result = { status: 'ok' };
+    } else if (body.action === 'saveKnowledge') {
+      saveKnowledge_(body.entry || {});
       result = { status: 'ok' };
     }
   } catch (err) {

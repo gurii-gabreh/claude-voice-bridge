@@ -68,10 +68,43 @@
   modeClaudeBtn.addEventListener("click", () => setMode("claude"));
   modeGeminiBtn.addEventListener("click", () => setMode("gemini"));
 
+  // ---- claude-voice-bridge専用のGAS中継(gas/README.md参照) ----
+  // GitHubのdata/tracker.json・data/knowledge-log.jsonへの書き込みを担う。
+  // study-appのGAS_URLとは別の、この拡張機能専用のGASプロジェクトのURLを設定する。
+  // 2026-09-13追加、ユーザー指示。
+  const CVB_GAS_URL = ''; // デプロイ後、発行されたWebアプリURLをここに設定する
+
+  // 「🔍 ルームタスク一覧を抽出」ボタン1回分の抽出結果を、data/knowledge-log.jsonへ
+  // 1件だけ追記する(要約せず全文。「次同じようなことや開発に活かしたい、無駄な
+  // 確認や実績としてナレッジ化しておきたい」というユーザー指示)。CVB_GAS_URLが
+  // 未設定の間は何もしない。音声応答(Voiceモード)・常時監視からは呼ばない
+  // (ユーザー指示「Voiceモードは今まで通りに」「音声は除外してよい」)。
+  async function syncKnowledgeToGithub(text, source) {
+    if (!CVB_GAS_URL) return;
+    const entry = {
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      ts: Date.now(),
+      room: source,
+      text,
+    };
+    try {
+      const res = await fetch(CVB_GAS_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "saveKnowledge", entry }),
+      });
+      const json = await res.json();
+      if (json.status !== "ok") console.warn("[cvb-panel] ナレッジのGitHub同期エラー:", json.message);
+    } catch (e) {
+      console.warn("[cvb-panel] ナレッジのGitHub同期エラー(通信失敗):", e);
+    }
+  }
+
   // 「ルームタスク一覧を抽出」ボタン: 音声でのやり取りや常時監視を待たず、
   // 今アクティブなタブに見えている発言を全てその場で抽出し、既存のトラッカー
   // (TrackerStore)・全文記録(RoomLogStore)へ反映する。データの保存方法・管理方法は
   // 通常の応答受信時と完全に同じものを使う(2026-09-13追加、ユーザー指示)。
+  // あわせて、この1回分の抽出結果をナレッジとしてGitHubへも同期する(CVB_GAS_URL
+  // 設定済みの場合のみ)。
   extractRoomBtn.addEventListener("click", async () => {
     const tabId = await getActiveTabId();
     if (!tabId) {
@@ -81,8 +114,10 @@
     try {
       const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-extract-room-text" });
       if (res && res.ok && res.text) {
-        window.TrackerStore.scan(res.text, { mode, title: res.title || "", url: res.url || "" });
+        const source = { mode, title: res.title || "", url: res.url || "" };
+        window.TrackerStore.scan(res.text, source);
         window.RoomLogStore.append({ text: res.text, source: "manual-extract", mode });
+        syncKnowledgeToGithub(res.text, source);
         setStatus(`ルーム内のマーカーを抽出しました(${SITE_LABELS[mode]})`);
       } else {
         setStatus("抽出できるテキストが見つかりませんでした", "error");
@@ -93,21 +128,17 @@
   });
 
   // ---- トラッカーのGitHub同期(手動トリガーのみ) ----
-  // GAS中継(gas/README.md参照)経由で、その時点のトラッカー全体をdata/tracker.json
-  // (claude-voice-bridgeリポジトリ)へ上書き保存する。自動同期はしない(常時監視で
-  // 頻繁に更新されるたびcommitすると履歴が大量になるため、ボタンを押した時だけ)。
-  // 2026-09-13追加、ユーザー指示。study-appのGAS_URLとは別の、この拡張機能専用の
-  // GASプロジェクトのURLを設定する(gas/README.md参照)。
-  const TRACKER_GAS_URL = ''; // デプロイ後、発行されたWebアプリURLをここに設定する
-
+  // その時点のトラッカー全体をdata/tracker.json(claude-voice-bridgeリポジトリ)へ
+  // 上書き保存する。自動同期はしない(常時監視で頻繁に更新されるたびcommitすると
+  // 履歴が大量になるため、ボタンを押した時だけ)。2026-09-13追加、ユーザー指示。
   syncGithubBtn.addEventListener("click", async () => {
-    if (!TRACKER_GAS_URL) {
+    if (!CVB_GAS_URL) {
       setStatus("GitHub同期は未設定です(gas/README.mdの手順でデプロイしてください)", "error");
       return;
     }
     setStatus("GitHubへ同期中…");
     try {
-      const res = await fetch(TRACKER_GAS_URL, {
+      const res = await fetch(CVB_GAS_URL, {
         method: "POST",
         body: JSON.stringify({ action: "saveTracker", tracker: window.TrackerStore.getData() }),
       });
