@@ -598,7 +598,7 @@
     // には残すが表には出さない(2026-09-12、ユーザー指示)。
     const activeItems = (tracker.items || []).filter((item) => item.status !== "done");
 
-    activeItems.forEach((item) => {
+    activeItems.forEach((item, index) => {
       const tr = document.createElement("tr");
       const isConsult = item.kind === "相談";
       tr.innerHTML =
@@ -612,7 +612,9 @@
       const numBtn = document.createElement("button");
       numBtn.className = "tracker-num";
       numBtn.type = "button";
-      numBtn.textContent = item.kind;
+      // 2026-09-13追加(ユーザー指示「タスクには番号振れよ」): 表示中の各項目に
+      // 通し番号(1始まり)を振り、種別ラベルの前に付ける。
+      numBtn.textContent = `${index + 1}. ${item.kind}`;
       if (item.quote) {
         numBtn.title = "クリックでルーム内の該当箇所へ移動";
         numBtn.onclick = () => navigateToItem(item);
