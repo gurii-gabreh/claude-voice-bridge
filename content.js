@@ -55,6 +55,18 @@
     return `${el.tagName.toLowerCase()}${id}${cls}`;
   }
 
+  // 自分自身から`root`までの祖先を辿り、いずれかがposition:fixed/stickyなら
+  // trueを返す(画面に固定表示される操作バー・ヘッダー等を検出するため)。
+  function isFixedPositioned(el, root) {
+    let node = el;
+    while (node && node !== root && node !== document.body) {
+      const pos = window.getComputedStyle(node).position;
+      if (pos === "fixed" || pos === "sticky") return true;
+      node = node.parentElement;
+    }
+    return false;
+  }
+
   function isVisible(el) {
     if (!el) return false;
     const style = window.getComputedStyle(el);
@@ -140,6 +152,15 @@
       const text = el.textContent || "";
       return text.trim().length > 20 && text.trim().length < 20000;
     });
+    // 2026-09-13追加(不具合修正): モデル名・高速モード切替・編集承認ボタン等が
+    // まとまった、常に画面に居座る操作バー(position:fixed/sticky)が、会話の
+    // 進行と無関係に「新しいブロック」として毎回検出されてしまい、実際の返答の
+    // 代わりに抽出されてしまう不具合があった(ユーザー報告「編集を受け入れる
+    // Sonnet 5高速モード：オフ」が返答として抽出される)。実際の発言は通常の
+    // 文書フロー内でスクロールする(position:staticまたはrelative)のに対し、
+    // この種の操作バーは画面に固定表示するためfixed/stickyが使われることが
+    // 多いため、祖先を含めて固定配置されている要素は候補から除外する。
+    candidates = candidates.filter((el) => !isFixedPositioned(el, root));
     // 入れ子になった要素(親が子の内容をまるごと含んでいる場合)は内側(子)だけ残し、
     // 同じ内容が親・子の両方で二重に数えられるのを防ぐ(2026-09-13、ユーザー指摘
     // 「抽出結果が重複だらけで使い物にならない」への対応。特にclaude.ai/codeの
@@ -257,9 +278,14 @@
     const blocks = findMessageBlocks();
     if (blocks.length <= seenMessageCount) {
       const last = blocks[blocks.length - 1];
+      console.info(`[cvb:${SITE}] extractLatestResponseText: 件数が増えなかったため末尾ブロックを採用 -> ${describeEl(last)}`);
       return last ? last.textContent.trim() : "";
     }
     const newBlocks = blocks.slice(seenMessageCount);
+    console.info(
+      `[cvb:${SITE}] extractLatestResponseText: 新規ブロック${newBlocks.length}件を採用 -> `,
+      newBlocks.map(describeEl)
+    );
     return newBlocks
       .map((b) => b.textContent.trim())
       .filter(Boolean)
