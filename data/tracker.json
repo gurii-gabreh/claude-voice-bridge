@@ -19,6 +19,16 @@
       "status": "active",
       "source": { "mode": "claude", "title": "", "url": "" },
       "createdAt": "2026-09-13T00:00:01.000Z"
+    },
+    {
+      "id": "1789300000002_f5a6b",
+      "kind": "未完了作業",
+      "summary": "サイドパネルに追加した「📥 JSONから一覧を読み込む」ボタンの実機動作確認がまだ",
+      "quote": "「📥 JSONから一覧を読み込む」を押してみてください",
+      "uncertain": false,
+      "status": "active",
+      "source": { "mode": "claude", "title": "", "url": "" },
+      "createdAt": "2026-09-13T00:00:02.000Z"
     }
   ]
 }
