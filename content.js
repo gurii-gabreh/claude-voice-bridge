@@ -147,9 +147,17 @@
         console.warn(`[cvb:${SITE}] invalid selector override for message`, e);
       }
     }
+    // 2026-09-13追記(不具合修正・確定対応): position:fixed除外・重複除去の位置判定と
+    // 2回対策を重ねても、実際のユーザーのログで3回連続、この同じ操作バーの文言
+    // (モデル名・高速モード切替・編集承認ボタンをまとめた固定のUI文言)が
+    // 「新規ブロック」として誤抽出され続けることが確認された。これはユーザーの
+    // 会話内容ではなく常に同じ固定のUI文言なので、名指しで除外する(構造的な
+    // 推測に頼らない、実測に基づく確定的な除外)。
+    const KNOWN_UI_CHROME_SNIPPETS = ["高速モード", "編集を受け入れる"];
     const root = document.querySelector("main") || document.body;
     let candidates = Array.from(root.querySelectorAll("div, article")).filter((el) => {
       const text = el.textContent || "";
+      if (KNOWN_UI_CHROME_SNIPPETS.some((s) => text.includes(s))) return false;
       return text.trim().length > 20 && text.trim().length < 20000;
     });
     // 2026-09-13追加(不具合修正): モデル名・高速モード切替・編集承認ボタン等が
