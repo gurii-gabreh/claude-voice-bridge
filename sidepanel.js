@@ -134,7 +134,9 @@
   // そのため先頭に"/"を置かない、スキル名を平文で明示する言い回しに変更した
   // (Skillツールは「ユーザーが名前を明示した場合」もスラッシュ無しの呼び出しとして
   // 有効なため、この言い回しでも同じスキルが呼び出される)。
-  const AUDIT_TRIGGER_TEXT = "room-task-auditスキルを呼び出して実行してください。";
+  // 2026-09-13追記: ルーム上でこの自動送信メッセージだと一目で分かるよう、
+  // 先頭に固定マーカー「【ルームタスク抽出】」を付ける(ユーザー指示)。
+  const AUDIT_TRIGGER_TEXT = "【ルームタスク抽出】room-task-auditスキルを呼び出して実行してください。";
   let pendingAuditRequest = false;
 
   // room-task-auditスキルの出力([ROOM-TASK-AUDIT-START]...[ROOM-TASK-AUDIT-END])を
