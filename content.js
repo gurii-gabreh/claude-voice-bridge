@@ -215,6 +215,15 @@
       });
       return true;
     }
+    if (msg.type === "cvb-extract-room-text") {
+      // 「ルームタスク一覧」ボタン用: 常時監視(cvb-passive-message)を待たず、
+      // 今このタブに見えている発言を全てその場で抽出して返す(2026-09-13追加、
+      // ユーザー指示「ボタンを押したらルーム内の文言を吸い出し、タスクを一覧化」)。
+      const blocks = findMessageBlocks();
+      const text = blocks.map((b) => b.textContent.trim()).filter(Boolean).join("\n");
+      sendResponse({ ok: true, text, title: document.title, url: location.href });
+      return true;
+    }
     if (msg.type === "cvb-insert-text") {
       // 定例文ボタン用: 入力欄へ反映するだけで送信はしない(送信は自分で押す想定)
       const input = findComposerInput();
@@ -244,15 +253,18 @@
         waitForResponse(() => {
           const responseText = extractLatestResponseText();
           console.info(`[cvb:${SITE}] waitForResponse: 応答テキスト(${responseText.length}文字)`, responseText.slice(0, 80));
-          chrome.runtime.sendMessage({ type: "cvb-response-ready", text: responseText }, () => {
-            if (chrome.runtime.lastError) {
-              // サイドパネルが閉じている等で受け手がいないと失敗する。応答自体の取得は
-              // 成功しているので、原因切り分けのためにログだけ残す。
-              console.warn(`[cvb:${SITE}] cvb-response-ready の送信に失敗:`, chrome.runtime.lastError.message);
-            } else {
-              console.info(`[cvb:${SITE}] cvb-response-ready を送信済み`);
+          chrome.runtime.sendMessage(
+            { type: "cvb-response-ready", text: responseText, title: document.title, url: location.href },
+            () => {
+              if (chrome.runtime.lastError) {
+                // サイドパネルが閉じている等で受け手がいないと失敗する。応答自体の取得は
+                // 成功しているので、原因切り分けのためにログだけ残す。
+                console.warn(`[cvb:${SITE}] cvb-response-ready の送信に失敗:`, chrome.runtime.lastError.message);
+              } else {
+                console.info(`[cvb:${SITE}] cvb-response-ready を送信済み`);
+              }
             }
-          });
+          );
         });
       }, 80);
       sendResponse({ ok: true });

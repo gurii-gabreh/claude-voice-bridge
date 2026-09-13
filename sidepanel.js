@@ -24,6 +24,8 @@
   const micPermissionBtn = document.getElementById("mic-permission-btn");
   const modeClaudeBtn = document.getElementById("mode-claude-btn");
   const modeGeminiBtn = document.getElementById("mode-gemini-btn");
+  const extractRoomBtn = document.getElementById("extract-room-btn");
+  const syncGithubBtn = document.getElementById("sync-github-btn");
   const rateSliderEl = document.getElementById("rate-slider");
   const rateValueEl = document.getElementById("rate-value");
   const voiceSelectEl = document.getElementById("voice-select");
@@ -65,6 +67,60 @@
 
   modeClaudeBtn.addEventListener("click", () => setMode("claude"));
   modeGeminiBtn.addEventListener("click", () => setMode("gemini"));
+
+  // 「ルームタスク一覧を抽出」ボタン: 音声でのやり取りや常時監視を待たず、
+  // 今アクティブなタブに見えている発言を全てその場で抽出し、既存のトラッカー
+  // (TrackerStore)・全文記録(RoomLogStore)へ反映する。データの保存方法・管理方法は
+  // 通常の応答受信時と完全に同じものを使う(2026-09-13追加、ユーザー指示)。
+  extractRoomBtn.addEventListener("click", async () => {
+    const tabId = await getActiveTabId();
+    if (!tabId) {
+      setStatus(`${SITE_LABELS[mode]}のタブを開いて、アクティブにしてください`, "error");
+      return;
+    }
+    try {
+      const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-extract-room-text" });
+      if (res && res.ok && res.text) {
+        window.TrackerStore.scan(res.text, { mode, title: res.title || "", url: res.url || "" });
+        window.RoomLogStore.append({ text: res.text, source: "manual-extract", mode });
+        setStatus(`ルーム内のマーカーを抽出しました(${SITE_LABELS[mode]})`);
+      } else {
+        setStatus("抽出できるテキストが見つかりませんでした", "error");
+      }
+    } catch (e) {
+      setStatus(`${SITE_LABELS[mode]}のタブをリロードしてください(拡張機能更新後は毎回タブの再読み込みが必要です)`, "error");
+    }
+  });
+
+  // ---- トラッカーのGitHub同期(手動トリガーのみ) ----
+  // GAS中継(gas/README.md参照)経由で、その時点のトラッカー全体をdata/tracker.json
+  // (claude-voice-bridgeリポジトリ)へ上書き保存する。自動同期はしない(常時監視で
+  // 頻繁に更新されるたびcommitすると履歴が大量になるため、ボタンを押した時だけ)。
+  // 2026-09-13追加、ユーザー指示。study-appのGAS_URLとは別の、この拡張機能専用の
+  // GASプロジェクトのURLを設定する(gas/README.md参照)。
+  const TRACKER_GAS_URL = ''; // デプロイ後、発行されたWebアプリURLをここに設定する
+
+  syncGithubBtn.addEventListener("click", async () => {
+    if (!TRACKER_GAS_URL) {
+      setStatus("GitHub同期は未設定です(gas/README.mdの手順でデプロイしてください)", "error");
+      return;
+    }
+    setStatus("GitHubへ同期中…");
+    try {
+      const res = await fetch(TRACKER_GAS_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "saveTracker", tracker: window.TrackerStore.getData() }),
+      });
+      const json = await res.json();
+      if (json.status === "ok") {
+        setStatus("GitHubへ同期しました");
+      } else {
+        setStatus(`GitHub同期エラー: ${json.message || "不明なエラー"}`, "error");
+      }
+    } catch (e) {
+      setStatus("GitHub同期エラー(通信失敗)", "error");
+    }
+  });
 
   // テンプレートは { label, text } の配列。textは複数行の長文も可。
   // エディタ上では "---" だけの行で区切り、各ブロックの1行目をlabel、
@@ -341,6 +397,16 @@
   const trackerSectionEl = document.getElementById("tracker-section");
   const trackerTbodyEl = document.getElementById("tracker-tbody");
 
+  // 表示用の短いラベルのみ組み立てる(URLはtracker-store.js側にsource.urlとして
+  // 「ルームID」的に保持するが、表には出さない。2026-09-13、ユーザー指示)。
+  function roomLabel(source) {
+    if (!source) return "-";
+    const siteLabel = source.mode ? (SITE_LABELS[source.mode] || source.mode) : "";
+    const title = (source.title || "").trim();
+    const shortTitle = title.length > 20 ? title.slice(0, 20) + "…" : title;
+    return [siteLabel, shortTitle].filter(Boolean).join(": ") || "-";
+  }
+
   function renderBulletCell(cellEl, bullets) {
     cellEl.innerHTML = "";
     if (!bullets || !bullets.length) {
@@ -375,9 +441,11 @@
       tr.innerHTML =
         `<td class="tracker-num">相談${num}</td>` +
         `<td class="tracker-text"></td>` +
+        `<td class="tracker-room"></td>` +
         `<td><span class="tracker-badge waiting">回答待ち</span></td>` +
         `<td></td>`;
       renderBulletCell(tr.querySelector(".tracker-text"), item.bullets);
+      tr.querySelector(".tracker-room").textContent = roomLabel(item.source);
       const btn = document.createElement("button");
       btn.className = "tracker-dismiss";
       btn.textContent = "✕";
@@ -393,9 +461,11 @@
       tr.innerHTML =
         `<td class="tracker-num">作業${num}</td>` +
         `<td class="tracker-text"></td>` +
+        `<td class="tracker-room"></td>` +
         `<td><span class="tracker-badge working">作業中</span></td>` +
         `<td></td>`;
       renderBulletCell(tr.querySelector(".tracker-text"), item.bullets);
+      tr.querySelector(".tracker-room").textContent = roomLabel(item.source);
       const btn = document.createElement("button");
       btn.className = "tracker-dismiss";
       btn.textContent = "✕";
@@ -416,7 +486,7 @@
     if (msg.type === "cvb-response-ready") {
       const responseText = msg.text || "(応答テキストを取得できませんでした)";
       addLog(mode, responseText);
-      window.TrackerStore.scan(responseText);
+      window.TrackerStore.scan(responseText, { mode, title: msg.title || "", url: msg.url || "" });
       // マーカーの有無に関わらず、捕捉できた発言は全文をJSONに逐次追記して残す
       // (2026-09-12、ユーザー指示「全て拾え」)。
       window.RoomLogStore.append({ text: responseText, source: "active", mode });
@@ -434,10 +504,23 @@
       // ログ表示・読み上げはしないが、トラッカーのマーカー検出と、全文のJSON記録
       // (RoomLogStore)の両方に使う(2026-09-12、ユーザー指示「workerルームへの依頼も
       // この表に出してほしい」「マーカーの有無に関わらず全て拾え」)。
-      window.TrackerStore.scan(msg.text || "");
+      // モードはサイドパネルの現在選択(mode)ではなく、そのタブ自身のURLから判定する
+      // (常時監視の対象タブは、今アクティブに音声操作しているタブと別サイトの
+      // 場合があるため)。
+      const passiveMode = siteFromUrl(msg.url || "");
+      window.TrackerStore.scan(msg.text || "", { mode: passiveMode, title: msg.title || "", url: msg.url || "" });
       window.RoomLogStore.append({ text: msg.text || "", source: "passive", title: msg.title || "", url: msg.url || "" });
     }
   });
+
+  // 常時監視(cvb-passive-message)が来たタブのURLから、claude/gemini/不明を判定する。
+  function siteFromUrl(url) {
+    if (!url) return "";
+    for (const key of Object.keys(SITE_ORIGINS)) {
+      if (url.startsWith(SITE_ORIGINS[key])) return key;
+    }
+    return "";
+  }
 
   // ---- 読み上げ(速度・音声の選択に対応) ----
   let rate = 1.0;

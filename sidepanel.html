@@ -52,6 +52,26 @@
     display: flex;
     gap: 8px;
   }
+  #action-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  #extract-room-btn, #sync-github-btn {
+    font-size: 11px;
+    font-family: inherit;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--panel-border);
+    background: rgba(41, 230, 255, 0.05);
+    color: var(--accent);
+    cursor: pointer;
+  }
+  #extract-room-btn:hover, #sync-github-btn:hover {
+    background: rgba(41, 230, 255, 0.12);
+  }
   .mode-btn {
     font-size: 11px;
     font-family: inherit;
@@ -176,6 +196,7 @@
   }
   #tracker-table tr:last-child td { border-bottom: none; }
   .tracker-num { white-space: nowrap; color: var(--ink-soft); font-size: 10px; }
+  .tracker-room { white-space: nowrap; color: var(--ink-soft); font-size: 10px; max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
   .tracker-badge {
     display: inline-block;
     font-size: 10px;
@@ -330,6 +351,11 @@
     <button class="mode-btn" id="mode-gemini-btn" data-mode="gemini" type="button">GEMINI</button>
   </div>
 
+  <div id="action-row">
+    <button id="extract-room-btn" type="button">🔍 ルームタスク一覧を抽出</button>
+    <button id="sync-github-btn" type="button">☁️ GitHubへ同期</button>
+  </div>
+
   <div id="radar-wrap">
     <canvas id="radar" width="240" height="240" role="button" tabindex="0" aria-label="クリックで音声リンクの開始/停止"></canvas>
     <div class="telemetry mono" id="telemetry-tl"></div>
@@ -343,7 +369,7 @@
     <div class="section-title">📋 未解決の相談・進行中のタスク(見逃し防止)</div>
     <table id="tracker-table">
       <thead>
-        <tr><th>No.</th><th>内容</th><th>ステータス</th><th></th></tr>
+        <tr><th>No.</th><th>内容</th><th>ルーム</th><th>ステータス</th><th></th></tr>
       </thead>
       <tbody id="tracker-tbody"></tbody>
     </table>

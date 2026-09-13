@@ -66,7 +66,11 @@
     return result;
   }
 
-  function scan(text) {
+  // sourceは検出元の部屋(タブ)を表す任意情報 { mode, title, url }。
+  // urlは「ルームID」として裏で保持するだけで、表には出さない
+  // (2026-09-13、ユーザー指示「表示はしなくていいから、ルームのIDも裏では
+  // もっておいてほしい」)。表示用の短いラベルはsidepanel.js側でmode/titleから作る。
+  function scan(text, source) {
     if (!text) return;
     const re = /【(相談|処理開始|処理完了)(\d{3})】/g;
     const matches = Array.from(text.matchAll(re));
@@ -84,6 +88,7 @@
           bullets: extractBullets(block),
           status: "active", // マーカーが(再)出現した時点では常に「対応中」に戻す
           firstSeen: prev ? prev.firstSeen : now,
+          source: source || (prev && prev.source),
         };
       } else if (kind === "処理開始") {
         const prev = tracker.tasks[num];
@@ -93,6 +98,7 @@
           issueBullets: prev ? prev.issueBullets || [] : [],
           status: "active",
           startedAt: prev ? prev.startedAt : now,
+          source: source || (prev && prev.source),
         };
       } else if (kind === "処理完了") {
         const prev = tracker.tasks[num];
@@ -104,6 +110,7 @@
           status: "done", // 表示からは隠すが、JSON(chrome.storage.local)には残す
           startedAt: prev ? prev.startedAt : now,
           completedAt: now,
+          source: source || (prev && prev.source),
         };
       }
     });
