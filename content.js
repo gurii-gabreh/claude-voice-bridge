@@ -210,23 +210,19 @@
   // テキストノードを1つずつ辿り、needleを含む最初のノードの親要素を返す
   // (leaf-levelで探すことで、巨大な祖先要素ではなく実際にその文言がある
   // 最小限の要素を特定できる)。2026-09-13追加。
-  // 2026-09-13不具合修正: 以前は最初に見つかった一致(document順で一番早いもの)を
-  // 即returnしていたが、同じ引用文がルーム内に複数回出てくる場合(例: 同じ
-  // コンソールログを何度も貼った等)、常に一番古い(会話の最初の方の)出現箇所へ
-  // 飛んでしまう不具合があった(ユーザー報告「一番初めのコメント場所にとぶ」)。
-  // 該当箇所へ移動したいのはほぼ常に「今回の抽出に対応する、より新しい出現箇所」
-  // であるため、最後に見つかった一致を採用するよう変更した。
+  // 2026-09-13追記: 一度「最後に見つかった一致」を採用する方式に変更したが、
+  // ユーザー確認の結果、一番古い(最初に見つかった)出現箇所へ移動する挙動で
+  // 問題ない(この方が単純)とのことなので、元の「最初に見つかった一致」に戻した。
   function findElementContainingText(root, needle) {
     if (!needle) return null;
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     let node;
-    let lastMatch = null;
     while ((node = walker.nextNode())) {
       if (node.textContent && node.textContent.includes(needle)) {
-        lastMatch = node.parentElement;
+        return node.parentElement;
       }
     }
-    return lastMatch;
+    return null;
   }
 
   function setComposerText(el, text) {
