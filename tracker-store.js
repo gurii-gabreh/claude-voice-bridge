@@ -1,144 +1,60 @@
 // Claude Voice Bridge — tracker store (data layer)
 //
-// 2026-09-12追加: 【相談NNN】【処理開始NNN】【処理完了NNN】(CLAUDE.mdルール14マーカー)の
-// 検出・状態管理(= データ)を、表示(sidepanel.js)から分離するために切り出したモジュール。
-// ユーザー指示: 「一覧のところだけjson化し、サイドパネルは見せるだけにしろ」。
+// 2026-09-13大幅改修: 【相談NNN】【処理開始NNN】【処理完了NNN】マーカーの正規表現
+// スキャン方式を完全に廃止した(ユーザー指摘: AI側が毎回マーカーを付け忘れるため
+// 信頼できない)。代わりに、「🔍 ルームタスク一覧を抽出」ボタンが room-task-audit
+// スキル(progress-tracker-dashboardの.claude/skills/room-task-audit/)を起動し、
+// AIがその場でルームを読み返して判断した結果(setItems()で渡される)を保持する
+// だけのシンプルなデータ層にした。
+//
+// スキーマ: { items: [{ id, kind("相談"|"未完了作業"), summary, quote, uncertain,
+//   status("active"|"done"), source({mode,title,url}), createdAt }] }
+// 1回の監査(抽出)ごとに setItems() が呼ばれ、現在のitemsを丸ごと置き換える
+// (古い監査結果は自然に上書きされる。個々のitemを維持し続ける必要は無い —
+// 次に抽出すれば、まだ未解決ならAIが改めて拾い直すため)。
+//
 // このファイルが唯一のデータ所有者(chrome.storage.localへの読み書きも含む)になり、
-// sidepanel.js側はTrackerStore.getData()が返すJSONを描画するだけにする。
-//
-// 2026-09-12追記: 「ルーム内のタスクは全てJSONに残す。サイドパネルに見せるのは対応中のみ、
-// 完了したものは表示しないがJSONは保持する」というユーザー指示により、完了時に
-// エントリを削除するのをやめ、status: "active"/"done" を持たせる方式に変更した。
-// 「done」になったエントリをJSONから消すか表示から隠すかはsidepanel.js側の
-// 描画フィルタ(status!=="done"のみ表示)の責務とする(このファイルは常に全件を保持)。
-//
-// 注: 「同じ番号のマーカーが再出現した場合に内容(箇条書き)を上書きするか」の挙動は、
-// このリファクタでは変更していない(従来通り上書きする)。その挙動自体を変えるかは別途。
+// sidepanel.js側はTrackerStore.getData()が返すJSONを描画するだけにする
+// (2026-09-12、ユーザー指示「一覧のところだけjson化し、サイドパネルは見せるだけにしろ」
+// という方針自体は継続)。
 (function () {
   "use strict";
 
-  const tracker = { consultations: {}, tasks: {} };
+  const tracker = { items: [] };
   const listeners = [];
+  let nextId = 1;
 
   function notify() {
     listeners.forEach((fn) => fn(tracker));
   }
 
   function save() {
-    chrome.storage.local.set({ cvb_tracker: tracker });
+    chrome.storage.local.set({ cvb_tracker: { items: tracker.items, nextId } });
   }
 
-  // 改行ごとに1項目の箇条書き配列にする(2026-09-12、ユーザー指示「内容も箇条書きに」)。
-  function extractBullets(block) {
-    return block
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean);
-  }
-
-  // 【処理完了NNN】の本文を「対応内容:」「残課題:」の見出しで振り分ける
-  // (2026-09-12、ユーザー指示「作業時に対応した内容と、問題箇所や残課題があれば
-  // それぞれ欄を作り管理しろ」。見出しの書き方は今後AI側が統一する運用とする)。
-  // 見出しが無い場合は全文を対応内容側に入れる(後方互換・書き忘れ対策)。
-  const COMPLETION_HEADERS = [
-    { key: "doneBullets", re: /^対応(?:した)?内容[:：]\s*(.*)$/ },
-    { key: "issueBullets", re: /^(?:残課題|問題点|問題箇所)[:：]\s*(.*)$/ },
-  ];
-
-  function extractCompletionSections(block) {
-    const lines = extractBullets(block);
-    const result = { doneBullets: [], issueBullets: [] };
-    let current = null;
-    lines.forEach((line) => {
-      const header = COMPLETION_HEADERS.find((h) => h.re.test(line));
-      if (header) {
-        current = header.key;
-        const rest = line.match(header.re)[1].trim();
-        if (rest) result[current].push(rest);
-        return;
-      }
-      if (!current) {
-        result.doneBullets.push(line); // 見出し未着の行は対応内容側の既定値
-      } else {
-        result[current].push(line);
-      }
-    });
-    return result;
-  }
-
-  // sourceは検出元の部屋(タブ)を表す任意情報 { mode, title, url }。
-  // urlは「ルームID」として裏で保持するだけで、表には出さない
-  // (2026-09-13、ユーザー指示「表示はしなくていいから、ルームのIDも裏では
-  // もっておいてほしい」)。表示用の短いラベルはsidepanel.js側でmode/titleから作る。
-  // 戻り値: 検出したマーカーの件数(呼び出し側で「何件検出したか」を
-  // ユーザーに伝えるため。2026-09-13追加、ユーザー指摘「『抽出しました』しか
-  // 出ないけど」への対応。0件の場合と区別できるようにする)。
-  function scan(text, source) {
-    if (!text) return 0;
-    const re = /【(相談|処理開始|処理完了)(\d{3})】/g;
-    const matches = Array.from(text.matchAll(re));
+  // rawItems: room-task-audit スキルの出力をパースした配列
+  // [{ kind, summary, quote, uncertain }, ...]。source: {mode, title, url}(任意)。
+  function setItems(rawItems, source) {
     const now = Date.now();
-    matches.forEach((m, i) => {
-      const kind = m[1];
-      const num = m[2];
-      const start = m.index + m[0].length;
-      const end = i + 1 < matches.length ? matches[i + 1].index : text.length;
-      const block = text.slice(start, end);
-
-      if (kind === "相談") {
-        const prev = tracker.consultations[num];
-        tracker.consultations[num] = {
-          bullets: extractBullets(block),
-          status: "active", // マーカーが(再)出現した時点では常に「対応中」に戻す
-          firstSeen: prev ? prev.firstSeen : now,
-          source: source || (prev && prev.source),
-        };
-      } else if (kind === "処理開始") {
-        const prev = tracker.tasks[num];
-        tracker.tasks[num] = {
-          bullets: extractBullets(block),
-          doneBullets: prev ? prev.doneBullets || [] : [],
-          issueBullets: prev ? prev.issueBullets || [] : [],
-          status: "active",
-          startedAt: prev ? prev.startedAt : now,
-          source: source || (prev && prev.source),
-        };
-      } else if (kind === "処理完了") {
-        const prev = tracker.tasks[num];
-        const sections = extractCompletionSections(block);
-        tracker.tasks[num] = {
-          bullets: prev ? prev.bullets || [] : [],
-          doneBullets: sections.doneBullets,
-          issueBullets: sections.issueBullets,
-          status: "done", // 表示からは隠すが、JSON(chrome.storage.local)には残す
-          startedAt: prev ? prev.startedAt : now,
-          completedAt: now,
-          source: source || (prev && prev.source),
-        };
-      }
-    });
-    save();
-    notify();
-    return matches.length;
-  }
-
-  // ✕ボタンでの手動解決/手動終了。削除はせず、status: "done" にして
-  // JSONには残したまま表示から隠す(2026-09-12、ユーザー指示「相談も一律、
-  // ✗で解決済みにしたらJSONには残し、表示からは隠す」)。
-  function dismissConsultation(num) {
-    if (tracker.consultations[num]) {
-      tracker.consultations[num].status = "done";
-      tracker.consultations[num].resolvedAt = Date.now();
-    }
+    tracker.items = (rawItems || []).map((raw) => ({
+      id: nextId++,
+      kind: raw.kind,
+      summary: raw.summary,
+      quote: raw.quote || "",
+      uncertain: !!raw.uncertain,
+      status: "active",
+      source: source || null,
+      createdAt: now,
+    }));
     save();
     notify();
   }
 
-  function dismissTask(num) {
-    if (tracker.tasks[num]) {
-      tracker.tasks[num].status = "done";
-      tracker.tasks[num].resolvedAt = Date.now();
-    }
+  // ✕ボタンでの手動非表示。次に抽出すれば、まだ未解決ならAIが改めて拾い直す
+  // (このデータは「今回の抽出結果」でしかないため、削除ではなくstatus変更のみ)。
+  function dismissItem(id) {
+    const item = tracker.items.find((i) => i.id === id);
+    if (item) item.status = "done";
     save();
     notify();
   }
@@ -146,8 +62,8 @@
   async function load() {
     const stored = await chrome.storage.local.get("cvb_tracker");
     if (stored.cvb_tracker) {
-      tracker.consultations = stored.cvb_tracker.consultations || {};
-      tracker.tasks = stored.cvb_tracker.tasks || {};
+      tracker.items = stored.cvb_tracker.items || [];
+      nextId = stored.cvb_tracker.nextId || tracker.items.length + 1;
     }
     notify();
   }
@@ -157,10 +73,10 @@
   }
 
   // 全件(active/doneを問わず)を返す。表示用に「対応中のみ」へ絞り込むのは
-  // 描画側(sidepanel.js)の責務とする(このファイルは常に全件を保持するデータ層)。
+  // 描画側(sidepanel.js)の責務とする。
   function getData() {
     return tracker;
   }
 
-  window.TrackerStore = { scan, dismissConsultation, dismissTask, load, onChange, getData };
+  window.TrackerStore = { setItems, dismissItem, load, onChange, getData };
 })();

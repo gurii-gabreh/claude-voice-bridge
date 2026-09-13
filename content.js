@@ -127,6 +127,21 @@
     return matched;
   }
 
+  // テキストノードを1つずつ辿り、needleを含む最初のノードの親要素を返す
+  // (leaf-levelで探すことで、巨大な祖先要素ではなく実際にその文言がある
+  // 最小限の要素を特定できる)。2026-09-13追加。
+  function findElementContainingText(root, needle) {
+    if (!needle) return null;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) {
+      if (node.textContent && node.textContent.includes(needle)) {
+        return node.parentElement;
+      }
+    }
+    return null;
+  }
+
   function setComposerText(el, text) {
     el.focus();
     if (el.tagName === "TEXTAREA") {
@@ -241,6 +256,20 @@
       const blocks = findMessageBlocks();
       const text = blocks.map((b) => b.textContent.trim()).filter(Boolean).join("\n");
       sendResponse({ ok: true, text, title: document.title, url: location.href });
+      return true;
+    }
+    if (msg.type === "cvb-scroll-to-quote") {
+      // トラッカー表の項目番号クリック用: room-task-auditスキルが返した「引用」
+      // (会話中の一意なフレーズ)をページ内のテキストノードから探し、その要素へ
+      // スクロールする(2026-09-13追加、ユーザー指示「相談番号をクリックしたら
+      // ルーム内のその箇所に遷移するようにしろ」)。
+      const el = findElementContainingText(document.body, msg.quote || "");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        sendResponse({ ok: true });
+      } else {
+        sendResponse({ ok: false, reason: "quote-not-found" });
+      }
       return true;
     }
     if (msg.type === "cvb-insert-text") {

@@ -26,6 +26,10 @@
   const modeGeminiBtn = document.getElementById("mode-gemini-btn");
   const extractRoomBtn = document.getElementById("extract-room-btn");
   const syncGithubBtn = document.getElementById("sync-github-btn");
+  const panelTabVoiceBtn = document.getElementById("panel-tab-voice");
+  const panelTabListBtn = document.getElementById("panel-tab-list");
+  const voiceModePanelEl = document.getElementById("voice-mode-panel");
+  const listModePanelEl = document.getElementById("list-mode-panel");
   const rateSliderEl = document.getElementById("rate-slider");
   const rateValueEl = document.getElementById("rate-value");
   const voiceSelectEl = document.getElementById("voice-select");
@@ -68,6 +72,20 @@
   modeClaudeBtn.addEventListener("click", () => setMode("claude"));
   modeGeminiBtn.addEventListener("click", () => setMode("gemini"));
 
+  // ---- パネル切り替え(ボイスモード / 一覧モード) ----
+  // 2026-09-13追加、ユーザー指示「ボイスモードと一覧モードは、上部タブにより
+  // 切り替えられるようにしろ」。
+  function setPanelMode(panel) {
+    const isVoice = panel === "voice";
+    panelTabVoiceBtn.classList.toggle("active", isVoice);
+    panelTabListBtn.classList.toggle("active", !isVoice);
+    voiceModePanelEl.style.display = isVoice ? "flex" : "none";
+    listModePanelEl.style.display = isVoice ? "none" : "flex";
+    chrome.storage.local.set({ cvb_panel_mode: panel });
+  }
+  panelTabVoiceBtn.addEventListener("click", () => setPanelMode("voice"));
+  panelTabListBtn.addEventListener("click", () => setPanelMode("list"));
+
   // ---- claude-voice-bridge専用のGAS中継(gas/README.md参照) ----
   // GitHubのdata/tracker.json・data/knowledge-log.jsonへの書き込みを担う。
   // study-appのGAS_URLとは別の、この拡張機能専用のGASプロジェクトのURLを設定する。
@@ -99,34 +117,83 @@
     }
   }
 
-  // 「ルームタスク一覧を抽出」ボタン: 音声でのやり取りや常時監視を待たず、
-  // 今アクティブなタブに見えている発言を全てその場で抽出し、既存のトラッカー
-  // (TrackerStore)・全文記録(RoomLogStore)へ反映する。データの保存方法・管理方法は
-  // 通常の応答受信時と完全に同じものを使う(2026-09-13追加、ユーザー指示)。
-  // あわせて、この1回分の抽出結果をナレッジとしてGitHubへも同期する(CVB_GAS_URL
-  // 設定済みの場合のみ)。
+  // ---- ルームタスク監査(room-task-auditスキル、AI直接確認方式) ----
+  // 2026-09-13大幅改修: 【相談NNN】等のマーカー正規表現スキャンは完全廃止した
+  // (ユーザー指摘: AI側がタグを付け忘れるため信頼できない)。代わりに、ボタンを
+  // 押すとチャット入力欄へ固定フレーズ"/room-task-audit"を送信し、AI自身に
+  // このルームを直接読み返させて未解決の相談・未完了作業を判定させる。
+  // これは通常の会話ターンとして送受信される(音声モードと同じ送信の仕組みを
+  // 流用するだけで、別料金のAPIは呼ばない。通常のClaude Code利用量として消費される)。
+  const AUDIT_TRIGGER_TEXT = "/room-task-audit";
+  let pendingAuditRequest = false;
+
+  // room-task-auditスキルの出力([ROOM-TASK-AUDIT-START]...[ROOM-TASK-AUDIT-END])を
+  // パースする。フォーマットが想定と違えばnullを返す(スキルが呼ばれなかった、
+  // 応答が途中で切れた等)。
+  function parseAuditResponse(text) {
+    const block = (text || "").match(/\[ROOM-TASK-AUDIT-START\]([\s\S]*?)\[ROOM-TASK-AUDIT-END\]/);
+    if (!block) return null;
+    const body = block[1].trim();
+    if (!body || body.includes("未解決の項目はありません")) return [];
+    const lineRe = /種別:\s*(相談|未完了作業)\s*\|\s*内容:\s*(.+?)\s*\|\s*引用:\s*"(.*?)"\s*\|\s*不確実:\s*(はい|いいえ)/;
+    const items = [];
+    body.split(/\r?\n/).forEach((line) => {
+      const m = line.match(lineRe);
+      if (m) items.push({ kind: m[1], summary: m[2].trim(), quote: m[3], uncertain: m[4] === "はい" });
+    });
+    return items;
+  }
+
+  function handleAuditResponse(text, source) {
+    const items = parseAuditResponse(text);
+    if (items === null) {
+      setStatus("監査結果の解析に失敗しました(想定した形式で応答されませんでした)", "error");
+      return;
+    }
+    window.TrackerStore.setItems(items, source);
+    if (items.length > 0) {
+      setStatus(`${SITE_LABELS[mode]}: 未解決の項目を${items.length}件検出しました`);
+    } else {
+      setStatus(`${SITE_LABELS[mode]}: 未解決の項目はありませんでした`);
+    }
+  }
+
+  // 「🔍 ルームタスク一覧を抽出」ボタン: 2つの処理を行う。
+  // (1) 生の内容(要約せず全文)をRoomLogStore・ナレッジログへ記録(従来通り、
+  //     「実際にやり取りした内容をナレッジとして残したい」というユーザー指示のため)。
+  // (2) room-task-auditスキルをこのルーム上で起動し、AI自身に未解決項目を判定させる
+  //     (新方式。結果はcvb-response-ready経由で非同期に届く)。
   extractRoomBtn.addEventListener("click", async () => {
     const tabId = await getActiveTabId();
     if (!tabId) {
       setStatus(`${SITE_LABELS[mode]}のタブを開いて、アクティブにしてください`, "error");
       return;
     }
+
+    // (1) 生ログ・ナレッジ化(失敗しても致命的ではないので、失敗時はwarnのみ)
     try {
       const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-extract-room-text" });
       if (res && res.ok && res.text) {
         const source = { mode, title: res.title || "", url: res.url || "" };
-        const foundCount = window.TrackerStore.scan(res.text, source);
         window.RoomLogStore.append({ text: res.text, source: "manual-extract", mode });
         syncKnowledgeToGithub(res.text, source);
-        if (foundCount > 0) {
-          setStatus(`${SITE_LABELS[mode]}: マーカーを${foundCount}件検出しました`);
-        } else {
-          setStatus(`${SITE_LABELS[mode]}: マーカー(【相談】【処理開始】【処理完了】)は見つかりませんでした(表は更新されません)`, "error");
-        }
-      } else {
-        setStatus("抽出できるテキストが見つかりませんでした", "error");
       }
     } catch (e) {
+      console.warn("[cvb-panel] 生ログ抽出に失敗:", e);
+    }
+
+    // (2) AIへ直接確認を依頼
+    pendingAuditRequest = true;
+    setStatus(`${SITE_LABELS[mode]}: ルームを確認中…(AIへ問い合わせています)`);
+    try {
+      const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-send-text", text: AUDIT_TRIGGER_TEXT });
+      if (!res || !res.ok) {
+        pendingAuditRequest = false;
+        setStatus("入力欄が見つかりませんでした。手動セレクタ設定を確認してください", "error");
+      }
+      // res.ok===trueの場合、結果はcvb-response-ready(onMessageリスナー)で処理される
+    } catch (e) {
+      pendingAuditRequest = false;
       setStatus(`${SITE_LABELS[mode]}のタブをリロードしてください(拡張機能更新後は毎回タブの再読み込みが必要です)`, "error");
     }
   });
@@ -442,20 +509,32 @@
     return [siteLabel, shortTitle].filter(Boolean).join(": ") || "-";
   }
 
-  function renderBulletCell(cellEl, bullets) {
-    cellEl.innerHTML = "";
-    if (!bullets || !bullets.length) {
-      cellEl.textContent = "(内容不明)";
+  // トラッカー項目の番号をクリックした時、ルーム内の該当箇所へスクロールする
+  // (2026-09-13追加、ユーザー指示「相談番号をクリックしたらルーム内のその箇所に
+  // 遷移するようにしろ」)。item.quoteが無い/見つからない場合は何もしない。
+  async function navigateToItem(item) {
+    if (!item.quote) return;
+    const tabId = await getActiveTabId();
+    if (!tabId) {
+      setStatus(`${SITE_LABELS[mode]}のタブを開いて、アクティブにしてください`, "error");
       return;
     }
-    const ul = document.createElement("ul");
-    ul.className = "tracker-bullets";
-    bullets.forEach((line) => {
-      const li = document.createElement("li");
-      li.textContent = line;
-      ul.appendChild(li);
-    });
-    cellEl.appendChild(ul);
+    try {
+      const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-scroll-to-quote", quote: item.quote });
+      if (!res || !res.ok) {
+        setStatus("該当箇所が見つかりませんでした(ページが更新された可能性があります)", "error");
+      }
+    } catch (e) {
+      setStatus(`${SITE_LABELS[mode]}のタブをリロードしてください`, "error");
+    }
+  }
+
+  function copyItemToClipboard(item) {
+    const text = `【${item.kind}】${item.summary}`;
+    navigator.clipboard.writeText(text).then(
+      () => setStatus("内容をコピーしました"),
+      () => setStatus("コピーに失敗しました", "error")
+    );
   }
 
   function renderTracker() {
@@ -463,54 +542,56 @@
     trackerTbodyEl.innerHTML = "";
     // 表示は「対応中(status!=="done")」のみ。完了・解決済みはJSON(chrome.storage.local)
     // には残すが表には出さない(2026-09-12、ユーザー指示)。
-    const consultNums = Object.keys(tracker.consultations)
-      .filter((num) => tracker.consultations[num].status !== "done")
-      .sort();
-    const taskNums = Object.keys(tracker.tasks)
-      .filter((num) => tracker.tasks[num].status !== "done")
-      .sort();
+    const activeItems = (tracker.items || []).filter((item) => item.status !== "done");
 
-    consultNums.forEach((num) => {
-      const item = tracker.consultations[num];
+    activeItems.forEach((item) => {
       const tr = document.createElement("tr");
+      const isConsult = item.kind === "相談";
       tr.innerHTML =
-        `<td class="tracker-num">相談${num}</td>` +
+        `<td></td>` +
         `<td class="tracker-text"></td>` +
         `<td class="tracker-room"></td>` +
-        `<td><span class="tracker-badge waiting">回答待ち</span></td>` +
+        `<td><span class="tracker-badge ${isConsult ? "waiting" : "working"}">${isConsult ? "回答待ち" : "作業中"}${item.uncertain ? "・不確実" : ""}</span></td>` +
         `<td></td>`;
-      renderBulletCell(tr.querySelector(".tracker-text"), item.bullets);
+
+      const numCell = tr.firstElementChild;
+      const numBtn = document.createElement("button");
+      numBtn.className = "tracker-num";
+      numBtn.type = "button";
+      numBtn.textContent = item.kind;
+      if (item.quote) {
+        numBtn.title = "クリックでルーム内の該当箇所へ移動";
+        numBtn.onclick = () => navigateToItem(item);
+      } else {
+        numBtn.disabled = true;
+        numBtn.title = "引用が無いため移動できません";
+      }
+      numCell.appendChild(numBtn);
+
+      tr.querySelector(".tracker-text").textContent = item.summary || "(内容不明)";
       tr.querySelector(".tracker-room").textContent = roomLabel(item.source);
-      const btn = document.createElement("button");
-      btn.className = "tracker-dismiss";
-      btn.textContent = "✕";
-      btn.title = "解決済みにする(表示から外す。データは残る)";
-      btn.onclick = () => window.TrackerStore.dismissConsultation(num);
-      tr.lastElementChild.appendChild(btn);
+
+      const actionsCell = tr.lastElementChild;
+      const copyBtn = document.createElement("button");
+      copyBtn.className = "tracker-copy";
+      copyBtn.type = "button";
+      copyBtn.textContent = "📋";
+      copyBtn.title = "内容をコピー";
+      copyBtn.onclick = () => copyItemToClipboard(item);
+      actionsCell.appendChild(copyBtn);
+
+      const dismissBtn = document.createElement("button");
+      dismissBtn.className = "tracker-dismiss";
+      dismissBtn.type = "button";
+      dismissBtn.textContent = "✕";
+      dismissBtn.title = "一覧から外す(次回の抽出でまだ未解決なら再度出ます)";
+      dismissBtn.onclick = () => window.TrackerStore.dismissItem(item.id);
+      actionsCell.appendChild(dismissBtn);
+
       trackerTbodyEl.appendChild(tr);
     });
 
-    taskNums.forEach((num) => {
-      const item = tracker.tasks[num];
-      const tr = document.createElement("tr");
-      tr.innerHTML =
-        `<td class="tracker-num">作業${num}</td>` +
-        `<td class="tracker-text"></td>` +
-        `<td class="tracker-room"></td>` +
-        `<td><span class="tracker-badge working">作業中</span></td>` +
-        `<td></td>`;
-      renderBulletCell(tr.querySelector(".tracker-text"), item.bullets);
-      tr.querySelector(".tracker-room").textContent = roomLabel(item.source);
-      const btn = document.createElement("button");
-      btn.className = "tracker-dismiss";
-      btn.textContent = "✕";
-      btn.title = "対応中から外す(表示から外す。データは残る)";
-      btn.onclick = () => window.TrackerStore.dismissTask(num);
-      tr.lastElementChild.appendChild(btn);
-      trackerTbodyEl.appendChild(tr);
-    });
-
-    trackerSectionEl.classList.toggle("has-items", consultNums.length + taskNums.length > 0);
+    trackerSectionEl.classList.toggle("has-items", activeItems.length > 0);
   }
 
   window.TrackerStore.onChange(renderTracker);
@@ -520,8 +601,14 @@
     console.log("[cvb-panel] onMessage受信:", msg.type, msg);
     if (msg.type === "cvb-response-ready") {
       const responseText = msg.text || "(応答テキストを取得できませんでした)";
+      if (pendingAuditRequest) {
+        // room-task-auditスキルへの問い合わせの返信。通常のログ表示・読み上げは
+        // せず、監査結果のパース・トラッカー更新だけを行う(2026-09-13追加)。
+        pendingAuditRequest = false;
+        handleAuditResponse(responseText, { mode, title: msg.title || "", url: msg.url || "" });
+        return;
+      }
       addLog(mode, responseText);
-      window.TrackerStore.scan(responseText, { mode, title: msg.title || "", url: msg.url || "" });
       // マーカーの有無に関わらず、捕捉できた発言は全文をJSONに逐次追記して残す
       // (2026-09-12、ユーザー指示「全て拾え」)。
       window.RoomLogStore.append({ text: responseText, source: "active", mode });
@@ -536,26 +623,13 @@
       });
     } else if (msg.type === "cvb-passive-message") {
       // 声で操作していない別タブ(workerルーム等)からの常時監視による通知。
-      // ログ表示・読み上げはしないが、トラッカーのマーカー検出と、全文のJSON記録
-      // (RoomLogStore)の両方に使う(2026-09-12、ユーザー指示「workerルームへの依頼も
-      // この表に出してほしい」「マーカーの有無に関わらず全て拾え」)。
-      // モードはサイドパネルの現在選択(mode)ではなく、そのタブ自身のURLから判定する
-      // (常時監視の対象タブは、今アクティブに音声操作しているタブと別サイトの
-      // 場合があるため)。
-      const passiveMode = siteFromUrl(msg.url || "");
-      window.TrackerStore.scan(msg.text || "", { mode: passiveMode, title: msg.title || "", url: msg.url || "" });
+      // ログ表示・読み上げはしないが、全文のJSON記録(RoomLogStore)には使う
+      // (2026-09-12、ユーザー指示「マーカーの有無に関わらず全て拾え」)。
+      // マーカー正規表現によるトラッカー検出は2026-09-13に廃止済み(room-task-audit
+      // スキルへ一本化。このメッセージ自体はトラッカーには使わない)。
       window.RoomLogStore.append({ text: msg.text || "", source: "passive", title: msg.title || "", url: msg.url || "" });
     }
   });
-
-  // 常時監視(cvb-passive-message)が来たタブのURLから、claude/gemini/不明を判定する。
-  function siteFromUrl(url) {
-    if (!url) return "";
-    for (const key of Object.keys(SITE_ORIGINS)) {
-      if (url.startsWith(SITE_ORIGINS[key])) return key;
-    }
-    return "";
-  }
 
   // ---- 読み上げ(速度・音声の選択に対応) ----
   let rate = 1.0;
@@ -899,9 +973,10 @@
 
   // ---- 初期化 ----
   async function init() {
-    const stored = await chrome.storage.local.get(["cvb_mode", "cvb_rate", "cvb_voice_name"]);
+    const stored = await chrome.storage.local.get(["cvb_mode", "cvb_rate", "cvb_voice_name", "cvb_panel_mode"]);
     if (stored.cvb_mode === "claude" || stored.cvb_mode === "gemini") mode = stored.cvb_mode;
     updateModeUI();
+    setPanelMode(stored.cvb_panel_mode === "list" ? "list" : "voice");
 
     await window.TrackerStore.load(); // renderTrackerはonChangeで自動的に呼ばれる
     await window.RoomLogStore.load();

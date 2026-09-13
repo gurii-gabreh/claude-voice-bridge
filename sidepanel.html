@@ -48,6 +48,35 @@
     max-width: 280px;
   }
 
+  #panel-tabs {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+    justify-content: center;
+  }
+  .panel-tab {
+    font-size: 12px;
+    font-family: inherit;
+    font-weight: 700;
+    padding: 7px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--panel-border);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .panel-tab.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 10px rgba(41, 230, 255, 0.35) inset;
+  }
+  #voice-mode-panel, #list-mode-panel {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
   #mode-row {
     display: flex;
     gap: 8px;
@@ -195,7 +224,31 @@
     vertical-align: top;
   }
   #tracker-table tr:last-child td { border-bottom: none; }
-  .tracker-num { white-space: nowrap; color: var(--ink-soft); font-size: 10px; }
+  .tracker-num {
+    white-space: nowrap;
+    color: var(--accent);
+    font-size: 10px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: underline dotted;
+    font-family: inherit;
+  }
+  .tracker-num:hover { color: var(--ink); }
+  .tracker-num[disabled] { color: var(--ink-soft); cursor: default; text-decoration: none; }
+  .tracker-copy {
+    background: none;
+    border: 1px solid var(--panel-border);
+    color: var(--ink-soft);
+    border-radius: 4px;
+    font-size: 10px;
+    padding: 1px 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    margin-right: 4px;
+  }
+  .tracker-copy:hover { border-color: var(--accent); color: var(--accent); }
   .tracker-room { white-space: nowrap; color: var(--ink-soft); font-size: 10px; max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
   .tracker-badge {
     display: inline-block;
@@ -344,66 +397,78 @@
 <body>
 
   <div id="hud-title">V.B. TACTICAL LINK</div>
-  <p class="sub">オーブをクリックで起動。「Claude」または「Gemini」と呼びかけると、そのAIに切り替わって会話が始まります。</p>
 
-  <div id="mode-row">
-    <button class="mode-btn" id="mode-claude-btn" data-mode="claude" type="button">CLAUDE</button>
-    <button class="mode-btn" id="mode-gemini-btn" data-mode="gemini" type="button">GEMINI</button>
+  <div id="panel-tabs">
+    <button class="panel-tab active" id="panel-tab-voice" type="button">🎙️ ボイス</button>
+    <button class="panel-tab" id="panel-tab-list" type="button">📋 一覧</button>
   </div>
 
-  <div id="action-row">
-    <button id="extract-room-btn" type="button">🔍 ルームタスク一覧を抽出</button>
-    <button id="sync-github-btn" type="button">☁️ GitHubへ同期</button>
-  </div>
+  <div id="voice-mode-panel">
+    <p class="sub">オーブをクリックで起動。「Claude」または「Gemini」と呼びかけると、そのAIに切り替わって会話が始まります。</p>
 
-  <div id="radar-wrap">
-    <canvas id="radar" width="240" height="240" role="button" tabindex="0" aria-label="クリックで音声リンクの開始/停止"></canvas>
-    <div class="telemetry mono" id="telemetry-tl"></div>
-    <div class="telemetry mono" id="telemetry-bl"></div>
-    <div id="state-tag">IDLE</div>
-  </div>
-  <div id="status">停止中(オーブをクリックして開始)</div>
-  <button id="mic-permission-btn" type="button" style="display:none">マイクの許可ページを開く</button>
-
-  <div id="tracker-section">
-    <div class="section-title">📋 未解決の相談・進行中のタスク(見逃し防止)</div>
-    <table id="tracker-table">
-      <thead>
-        <tr><th>No.</th><th>内容</th><th>ルーム</th><th>ステータス</th><th></th></tr>
-      </thead>
-      <tbody id="tracker-tbody"></tbody>
-    </table>
-  </div>
-
-  <div id="log"></div>
-
-  <div id="voice-settings">
-    <div class="setting-row">
-      <label>読み上げ速度 <span id="rate-value">1.0x</span></label>
-      <input type="range" id="rate-slider" min="0.5" max="2" step="0.1" value="1">
+    <div id="mode-row">
+      <button class="mode-btn" id="mode-claude-btn" data-mode="claude" type="button">CLAUDE</button>
+      <button class="mode-btn" id="mode-gemini-btn" data-mode="gemini" type="button">GEMINI</button>
     </div>
-    <div class="setting-row">
-      <label>読み上げ音声</label>
-      <select id="voice-select"></select>
+
+    <div id="radar-wrap">
+      <canvas id="radar" width="240" height="240" role="button" tabindex="0" aria-label="クリックで音声リンクの開始/停止"></canvas>
+      <div class="telemetry mono" id="telemetry-tl"></div>
+      <div class="telemetry mono" id="telemetry-bl"></div>
+      <div id="state-tag">IDLE</div>
+    </div>
+    <div id="status">停止中(オーブをクリックして開始)</div>
+    <button id="mic-permission-btn" type="button" style="display:none">マイクの許可ページを開く</button>
+
+    <div id="log"></div>
+
+    <div id="voice-settings">
+      <div class="setting-row">
+        <label>読み上げ速度 <span id="rate-value">1.0x</span></label>
+        <input type="range" id="rate-slider" min="0.5" max="2" step="0.1" value="1">
+      </div>
+      <div class="setting-row">
+        <label>読み上げ音声</label>
+        <select id="voice-select"></select>
+      </div>
+    </div>
+  </div>
+
+  <div id="list-mode-panel" style="display:none;">
+    <p class="sub">「🔍 抽出」を押すと、AIがこのルームを直接読み返し、未解決の相談・未完了の作業を一覧化します(通常の会話ターンが1往復増えます)。</p>
+    <div id="action-row">
+      <button id="extract-room-btn" type="button">🔍 ルームタスク一覧を抽出</button>
+      <button id="sync-github-btn" type="button">☁️ GitHubへ同期</button>
+    </div>
+    <div id="tracker-section">
+      <div class="section-title">📋 未解決の相談・進行中のタスク(見逃し防止)</div>
+      <table id="tracker-table">
+        <thead>
+          <tr><th>種別</th><th>内容</th><th>ルーム</th><th>ステータス</th><th></th></tr>
+        </thead>
+        <tbody id="tracker-tbody"></tbody>
+      </table>
     </div>
   </div>
 
   <div id="phrases-section">
-    <div class="section-title">📌 定例文(押すと入力欄に反映、送信は自分で押す)</div>
-    <div id="phrase-buttons"></div>
     <details>
-      <summary>定例文を編集</summary>
-      <p style="margin:6px 0;font-size:11px;color:var(--ink-soft)">
-        1つのテンプレート = 1行目がボタンの名前、2行目以降が実際に入力欄へ反映される本文(複数行OK)。
-        テンプレート同士は「---」だけの行で区切ってください。
-      </p>
-      <textarea id="phrase-editor" rows="10" placeholder="ボタン名1
+      <summary class="section-title" style="display:inline-block;margin-bottom:0;">📌 定例文(押すと入力欄に反映、送信は自分で押す)</summary>
+      <div id="phrase-buttons"></div>
+      <details>
+        <summary>定例文を編集</summary>
+        <p style="margin:6px 0;font-size:11px;color:var(--ink-soft)">
+          1つのテンプレート = 1行目がボタンの名前、2行目以降が実際に入力欄へ反映される本文(複数行OK)。
+          テンプレート同士は「---」だけの行で区切ってください。
+        </p>
+        <textarea id="phrase-editor" rows="10" placeholder="ボタン名1
 本文1行目
 本文2行目
 ---
 ボタン名2
 本文(長文もOK)"></textarea>
-      <button id="phrase-save">保存</button>
+        <button id="phrase-save">保存</button>
+      </details>
     </details>
   </div>
 
