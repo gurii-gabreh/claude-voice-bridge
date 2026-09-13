@@ -199,7 +199,13 @@
       const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-send-text", text: AUDIT_TRIGGER_TEXT });
       if (!res || !res.ok) {
         pendingAuditRequest = false;
-        setStatus("入力欄が見つかりませんでした。手動セレクタ設定を確認してください", "error");
+        if (res && res.reason === "busy") {
+          // ボイスモードが会話中(応答待ち)の場合、監査を同時に送ると応答を取り違える
+          // ため送信自体を見送っている(2026-09-13追加、content.jsのsendInFlightガード)。
+          setStatus(`${SITE_LABELS[mode]}: ボイスモードが会話の応答待ち中のため、少し待ってから抽出し直してください`, "error");
+        } else {
+          setStatus("入力欄が見つかりませんでした。手動セレクタ設定を確認してください", "error");
+        }
       }
       // res.ok===trueの場合、結果はcvb-response-ready(onMessageリスナー)で処理される
     } catch (e) {
@@ -488,7 +494,14 @@
       const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-send-text", text });
       console.log("[cvb-panel] cvb-send-text の応答:", res);
       if (!res || !res.ok) {
-        setStatus("入力欄が見つかりませんでした。下の手動セレクタ設定を確認してください", "error");
+        if (res && res.reason === "busy") {
+          // 監査ボタン(一覧モード)とボイスモードの会話ターンが同時に走らないための
+          // ガード(2026-09-13追加)。この状態はエラーではなく単なる一時待ちなので、
+          // errorスタイルにはしない。
+          setStatus("他の送信が応答待ち中のため少し待ってから再度お試しください", "listening");
+        } else {
+          setStatus("入力欄が見つかりませんでした。下の手動セレクタ設定を確認してください", "error");
+        }
         return false;
       }
       return true;

@@ -25,6 +25,15 @@
   };
 
   let seenMessageCount = 0;
+  // 2026-09-13追加(不具合修正): ボイスモードでの会話ターン(listenOnce由来のcvb-send-text)と、
+  // 「🔍 ルームタスク一覧を抽出」ボタンでの監査ターン(audit由来のcvb-send-text)が、
+  // 同じseenMessageCount/waitForResponseの仕組みを共有しているため、片方の応答待ち中に
+  // もう片方が割り込むと、seenMessageCountの上書き・MutationObserverの二重起動で
+  // 応答の取り違え(無関係なUI文言を誤って抽出する等)が起きる不具合があった
+  // (ユーザー指摘「ボイス側の機能が作動しているときに起きる」)。このフラグで
+  // 送信〜応答受信までの間は新規の送信を拒否し、同時に2つの送信サイクルが
+  // 走らないようにする。
+  let sendInFlight = false;
 
   function bySelectorOverride(key) {
     const sel = localStorage.getItem(key);
@@ -311,12 +320,20 @@
       return true;
     }
     if (msg.type === "cvb-send-text") {
+      if (sendInFlight) {
+        // ボイスモードの会話ターンと監査ターンが同時に走ると応答を取り違えるため、
+        // 既に送信〜応答待ち中なら今回は送らずbusyを返す(2026-09-13追加)。
+        console.warn(`[cvb:${SITE}] cvb-send-text: 既に別の送信が応答待ち中のため今回はスキップします(ボイスモードが会話中の可能性があります)`);
+        sendResponse({ ok: false, reason: "busy" });
+        return true;
+      }
       const input = findComposerInput();
       if (!input) {
         console.warn(`[cvb:${SITE}] cvb-send-text: 入力欄が見つかりませんでした`);
         sendResponse({ ok: false, reason: "input-not-found" });
         return true;
       }
+      sendInFlight = true;
       seenMessageCount = findMessageBlocks().length;
       console.info(`[cvb:${SITE}] cvb-send-text: ${describeEl(input)} へ入力 -> "${msg.text}"`);
       setComposerText(input, msg.text);
@@ -328,6 +345,7 @@
         waitForResponse(() => {
           const responseText = extractLatestResponseText();
           console.info(`[cvb:${SITE}] waitForResponse: 応答テキスト(${responseText.length}文字)`, responseText.slice(0, 80));
+          sendInFlight = false;
           chrome.runtime.sendMessage(
             { type: "cvb-response-ready", text: responseText, title: document.title, url: location.href },
             () => {

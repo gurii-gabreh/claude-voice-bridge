@@ -3,17 +3,17 @@
     {
       "id": "1789300000000_a1b2c",
       "kind": "未完了作業",
-      "summary": "findSendButton()の呼び出し元(submitComposer)がまだ入力欄を渡すよう更新されておらず、近接判定の修正が未完成",
+      "summary": "findSendButton()の呼び出し元(submitComposer)を入力欄に最も近いボタンを選ぶよう修正済み(commit c8d531c)",
       "quote": "送信ボタンをクリック",
       "uncertain": false,
-      "status": "active",
+      "status": "done",
       "source": { "mode": "claude", "title": "", "url": "" },
       "createdAt": "2026-09-13T00:00:00.000Z"
     },
     {
       "id": "1789300000001_d3e4f",
       "kind": "未完了作業",
-      "summary": "応答抽出ロジックがClaudeの実際の返答ではなくページ上部のツールバー文言を誤って拾ってしまう不具合が未修正",
+      "summary": "応答抽出が的外れなツールバー文言を拾う不具合。原因はボイスモードの会話ターンと監査ターンが同じseenMessageCountを共有し同時送信で状態が壊れていたことと判明、sendInFlightガードを追加して修正した(ユーザーが指摘し続けていた「ボイス側の機能が作動している」の正体)。ユーザーによる実機再確認が未完了のためactiveのまま残す",
       "quote": "編集を受け入れるSonnet 5高速モード：オフ",
       "uncertain": false,
       "status": "active",
