@@ -12,7 +12,7 @@ claude.ai / Gemini(ブラウザ版)との会話を、音声で行うためのChr
 
 当初は【相談NNN】【処理開始NNN】【処理完了NNN】(progress-tracker-dashboardのCLAUDE.mdルール14マーカー)を正規表現で検出する方式だったが、AI(Claude)側が毎回マーカーを付け忘れ続け信頼できないという指摘を受け、**完全に廃止した**。代わりに、一覧モードの「🔍 ルームタスク一覧を抽出」ボタンを押すと:
 
-1. `room-task-audit`スキル(`progress-tracker-dashboard`の`.claude/skills/room-task-audit/`)を起動する固定フレーズ`/room-task-audit`をチャット入力欄へ自動送信する(音声モードの送信・応答待ちの仕組みをそのまま流用。通常の会話ターンが1往復増えるだけで、別料金のAPIは呼ばない)
+1. `room-task-audit`スキル(`progress-tracker-dashboard`の`.claude/skills/room-task-audit/`)を起動する固定フレーズ「room-task-auditスキルを呼び出して実行してください。」をチャット入力欄へ自動送信する(音声モードの送信・応答待ちの仕組みをそのまま流用。通常の会話ターンが1往復増えるだけで、別料金のAPIは呼ばない)。**2026-09-13不具合修正**: 当初は先頭が`/`の`/room-task-audit`を送信していたが、claude.ai/codeの入力欄では先頭`/`がClaude Code組み込みのスラッシュコマンド/スキル選択ポップアップを開いてしまい、送信ボタン・Enterキーがそのポップアップの選択操作に奪われて実際には送信されない(抽出ボタンを押しても応答が来ず固まる)不具合があったため、先頭`/`を使わない言い回しに変更した
 2. AI自身がそのルームを直接読み返し、未解決の相談・未完了の作業を`[ROOM-TASK-AUDIT-START]`〜`[ROOM-TASK-AUDIT-END]`の固定形式(種別|内容|引用|不確実)で報告する
 3. `sidepanel.js`がこれをパースし、`TrackerStore.setItems()`で表を丸ごと置き換える(1回の抽出=その時点での「今の状態」のスナップショット。既に解決済みの項目はAIが最初から含めないので、削除操作は基本的に不要)
 
