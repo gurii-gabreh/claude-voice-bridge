@@ -78,5 +78,28 @@
     return tracker;
   }
 
-  window.TrackerStore = { setItems, dismissItem, load, onChange, getData };
+  // data/tracker.json(claude-voice-bridgeリポジトリのGitHub上のファイル)から
+  // 取得した、既に完成形のitems配列でそのまま置き換える(2026-09-13追加)。
+  // 経緯: ブラウザの自動抽出(ページのDOM構造を推測して応答を捕まえる仕組み)は
+  // 対象サイトの表示変更に弱く、繰り返し誤抽出が発生していた。一方でAI(Claude)が
+  // このルームを直接確認してdata/tracker.jsonへ書き込む経路は確実に機能して
+  // いたため、ユーザー指示により「ボタンを押したらGitHub上のJSONを読み込んで
+  // 一覧化するだけ」の経路を追加した。ブラウザの自動抽出とは完全に独立している。
+  function loadFromGithubItems(items) {
+    const now = Date.now();
+    tracker.items = (items || []).map((it, idx) => ({
+      id: it.id || `${now}_${idx}`,
+      kind: it.kind,
+      summary: it.summary,
+      quote: it.quote || "",
+      uncertain: !!it.uncertain,
+      status: it.status || "active",
+      source: it.source || null,
+      createdAt: it.createdAt || now,
+    }));
+    save();
+    notify();
+  }
+
+  window.TrackerStore = { setItems, dismissItem, load, onChange, getData, loadFromGithubItems };
 })();

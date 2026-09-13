@@ -26,6 +26,7 @@
   const modeGeminiBtn = document.getElementById("mode-gemini-btn");
   const extractRoomBtn = document.getElementById("extract-room-btn");
   const syncGithubBtn = document.getElementById("sync-github-btn");
+  const loadTrackerJsonBtn = document.getElementById("load-tracker-json-btn");
   const panelTabVoiceBtn = document.getElementById("panel-tab-voice");
   const panelTabListBtn = document.getElementById("panel-tab-list");
   const voiceModePanelEl = document.getElementById("voice-mode-panel");
@@ -239,6 +240,34 @@
       }
     } catch (e) {
       setStatus("GitHub同期エラー(通信失敗)", "error");
+    }
+  });
+
+  // 「📥 JSONから一覧を読み込む」ボタン: 2026-09-13追加、ユーザー指示。
+  // 経緯: ブラウザ側の自動抽出(ページのDOM構造を推測して応答を捕まえる仕組み)は
+  // claude.ai/code側の表示変更に弱く、繰り返し誤抽出が発生していた。一方でAI
+  // (Claude)がこのルームを直接確認してdata/tracker.json(claude-voice-bridge
+  // リポジトリ)へ書き込む経路は確実に機能していたため、ブラウザの自動抽出とは
+  // 独立に、GitHub上のdata/tracker.jsonを直接fetchして一覧に反映するだけの
+  // ボタンを追加した(読み取り専用・認証不要、publicリポジトリのraw contentを
+  // 取得するだけ)。
+  const TRACKER_JSON_RAW_URL =
+    "https://raw.githubusercontent.com/gurii-gabreh/claude-voice-bridge/main/data/tracker.json";
+  loadTrackerJsonBtn.addEventListener("click", async () => {
+    setStatus("GitHub上のJSONを読み込み中…");
+    try {
+      const res = await fetch(`${TRACKER_JSON_RAW_URL}?t=${Date.now()}`, { cache: "no-store" });
+      if (!res.ok) {
+        setStatus(`JSONの取得に失敗しました(HTTP ${res.status})`, "error");
+        return;
+      }
+      const json = await res.json();
+      window.TrackerStore.loadFromGithubItems(json.items || []);
+      const count = (json.items || []).filter((i) => (i.status || "active") !== "done").length;
+      setStatus(`GitHub上のJSONから読み込みました(未完了${count}件)`);
+    } catch (e) {
+      console.log("[cvb-panel] JSONの読み込みに失敗:", e);
+      setStatus("JSONの読み込みに失敗しました(通信エラー)", "error");
     }
   });
 
