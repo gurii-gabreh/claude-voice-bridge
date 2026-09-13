@@ -171,11 +171,26 @@
     );
     // 仮想化・アクセシビリティ用の隠し複製など、DOM構造は別でも中身が完全一致する
     // 要素も重複としてまとめて除去する。
-    const seenText = new Set();
+    //
+    // 2026-09-13追記(不具合修正): 当初は単純にtextContentの完全一致だけで重複判定
+    // していたが、これだと「room-task-auditへの返答が前回と一字一句同じ」という
+    // 正当なケース(ルームの内容が変わっていない場合、同じ監査結果を返すのは仕様通り)
+    // まで「重複」として除去してしまい、実際には新しく増えた返答ブロックが消えて
+    // ブロック総数が増えなかったことになり(件数が増えないため無関係な末尾要素を
+    // 誤って抽出する不具合の原因になっていた)。アクセシビリティ用の隠し複製は
+    // 同じ画面位置(同じbounding rect)に重なって存在するのに対し、時間的に離れた
+    // 別ターンの正当な同一テキストは画面上の位置(特に縦位置)が異なるはずなので、
+    // テキストが一致し、かつ画面上でほぼ同じ位置(top/leftの差が2px未満)にある
+    // 場合のみ重複として除去するよう変更した。
+    const seen = [];
     const matched = candidates.filter((el) => {
       const text = (el.textContent || "").trim();
-      if (seenText.has(text)) return false;
-      seenText.add(text);
+      const rect = el.getBoundingClientRect();
+      const isDup = seen.some(
+        (s) => s.text === text && Math.abs(s.rect.top - rect.top) < 2 && Math.abs(s.rect.left - rect.left) < 2
+      );
+      if (isDup) return false;
+      seen.push({ text, rect });
       return true;
     });
     console.info(
