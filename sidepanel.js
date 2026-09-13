@@ -563,21 +563,29 @@
     return [siteLabel, shortTitle].filter(Boolean).join(": ") || "-";
   }
 
-  // トラッカー項目の番号をクリックした時、ルーム内の該当箇所へスクロールする
-  // (2026-09-13追加、ユーザー指示「相談番号をクリックしたらルーム内のその箇所に
-  // 遷移するようにしろ」)。item.quoteが無い/見つからない場合は何もしない。
-  async function navigateToItem(item) {
-    if (!item.quote) return;
+  // タスクIDボタンをクリックした時、ルーム内で【タスクID:N】と書かれている箇所へ
+  // 順番にスクロールする(2026-09-13追加、ユーザー指示「タスクIDを繰り返しクリック
+  // したら、次のタスクIDが記載されている場所にジャンプするようにしろ」)。
+  // taskIdごとに現在何番目の出現箇所まで進んだかをnavCycleで覚えておき、
+  // クリックのたびに次へ進める(最後まで行ったら最初に戻る)。
+  const navCycle = new Map(); // taskId -> 次に表示するインデックス
+  async function navigateToTaskId(taskId) {
     const tabId = await getActiveTabId();
     if (!tabId) {
       setStatus(`${SITE_LABELS[mode]}のタブを開いて、アクティブにしてください`, "error");
       return;
     }
+    const marker = `【タスクID:${taskId}】`;
+    const index = navCycle.get(taskId) || 0;
     try {
-      const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-scroll-to-quote", quote: item.quote });
-      if (!res || !res.ok) {
-        setStatus("該当箇所が見つかりませんでした(ページが更新された可能性があります)", "error");
+      const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-scroll-to-occurrence", text: marker, index });
+      if (!res || !res.ok || !res.total) {
+        setStatus(`「${marker}」がルーム内に見つかりませんでした`, "error");
+        navCycle.delete(taskId);
+        return;
       }
+      navCycle.set(taskId, (index + 1) % res.total);
+      setStatus(`タスクID: ${taskId} の出現箇所 ${index + 1}/${res.total} 件目へ移動しました`);
     } catch (e) {
       setStatus(`${SITE_LABELS[mode]}のタブをリロードしてください`, "error");
     }
@@ -612,16 +620,13 @@
       const numBtn = document.createElement("button");
       numBtn.className = "tracker-num";
       numBtn.type = "button";
-      // 2026-09-13追加(ユーザー指示「タスクには番号振れよ」): 表示中の各項目に
-      // 通し番号(1始まり)を振り、種別ラベルの前に付ける。
-      numBtn.textContent = `${index + 1}. ${item.kind}`;
-      if (item.quote) {
-        numBtn.title = "クリックでルーム内の該当箇所へ移動";
-        numBtn.onclick = () => navigateToItem(item);
-      } else {
-        numBtn.disabled = true;
-        numBtn.title = "引用が無いため移動できません";
-      }
+      // 2026-09-13追加(ユーザー指示「種別はタスクIDに変えろ」): 種別ラベルではなく
+      // タスクID(表示順の通し番号、1始まり)を表示する。room-task-auditスキルが
+      // 会話中に埋め込む固定書式【タスクID:N】(SKILL.md参照)のNと一致させる。
+      const taskId = index + 1;
+      numBtn.textContent = `タスクID: ${taskId}`;
+      numBtn.title = "クリックでルーム内の該当箇所へ移動(連続クリックで次の出現箇所へ)";
+      numBtn.onclick = () => navigateToTaskId(taskId);
       numCell.appendChild(numBtn);
 
       tr.querySelector(".tracker-text").textContent = item.summary || "(内容不明)";

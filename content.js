@@ -225,6 +225,28 @@
     return null;
   }
 
+  // 2026-09-13追加: タスクIDボタンの「連続クリックで次の出現箇所へジャンプ」用。
+  // needle(【タスクID:N】等の固定文字列)を含む要素を全件、document順で集める。
+  // 同じ親要素の子テキストノード同士で重複マッチしないよう、直近で採用した
+  // 親要素は連続してカウントしない。
+  function findAllElementsContainingText(root, needle) {
+    if (!needle) return [];
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let node;
+    const matches = [];
+    let lastEl = null;
+    while ((node = walker.nextNode())) {
+      if (node.textContent && node.textContent.includes(needle)) {
+        const el = node.parentElement;
+        if (el !== lastEl) {
+          matches.push(el);
+          lastEl = el;
+        }
+      }
+    }
+    return matches;
+  }
+
   function setComposerText(el, text) {
     el.focus();
     if (el.tagName === "TEXTAREA") {
@@ -358,6 +380,22 @@
       } else {
         sendResponse({ ok: false, reason: "quote-not-found" });
       }
+      return true;
+    }
+    if (msg.type === "cvb-scroll-to-occurrence") {
+      // タスクIDボタン用: msg.text(【タスクID:N】等)の全出現箇所のうち、
+      // msg.indexで指定された番目へスクロールする(2026-09-13追加、ユーザー指示
+      // 「タスクIDを繰り返しクリックしたら、次のタスクIDが記載されている場所に
+      // ジャンプするようにしろ」)。何件見つかったか(total)も返し、サイド
+      // パネル側で「次は何番目か」を管理できるようにする。
+      const matches = findAllElementsContainingText(document.body, msg.text || "");
+      if (matches.length === 0) {
+        sendResponse({ ok: false, reason: "not-found", total: 0 });
+        return true;
+      }
+      const idx = ((msg.index || 0) % matches.length + matches.length) % matches.length;
+      matches[idx].scrollIntoView({ behavior: "smooth", block: "center" });
+      sendResponse({ ok: true, total: matches.length, index: idx });
       return true;
     }
     if (msg.type === "cvb-insert-text") {
