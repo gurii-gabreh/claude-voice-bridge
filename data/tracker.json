@@ -1,3 +1,24 @@
 {
-  "items": []
+  "items": [
+    {
+      "id": "1789300000000_a1b2c",
+      "kind": "未完了作業",
+      "summary": "findSendButton()の呼び出し元(submitComposer)がまだ入力欄を渡すよう更新されておらず、近接判定の修正が未完成",
+      "quote": "送信ボタンをクリック",
+      "uncertain": false,
+      "status": "active",
+      "source": { "mode": "claude", "title": "", "url": "" },
+      "createdAt": "2026-09-13T00:00:00.000Z"
+    },
+    {
+      "id": "1789300000001_d3e4f",
+      "kind": "未完了作業",
+      "summary": "応答抽出ロジックがClaudeの実際の返答ではなくページ上部のツールバー文言を誤って拾ってしまう不具合が未修正",
+      "quote": "編集を受け入れるSonnet 5高速モード：オフ",
+      "uncertain": false,
+      "status": "active",
+      "source": { "mode": "claude", "title": "", "url": "" },
+      "createdAt": "2026-09-13T00:00:01.000Z"
+    }
+  ]
 }

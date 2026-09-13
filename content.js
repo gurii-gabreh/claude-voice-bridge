@@ -76,16 +76,43 @@
     return candidates[0];
   }
 
-  function findSendButton() {
+  // 2026-09-13不具合修正: 以前はページ内の最初に見つかった「send/送信」ラベルの
+  // ボタンを無条件で採用していたが、claude.ai/codeにはヘッダー付近に「フィードバックを
+  // 送信」ボタン(aria-labelに"送信"を含む)が別に存在し、そちらがDOM順で先に来る場合が
+  // あり、誤ってそちらをクリックしてしまうと実際のメッセージは送信されず、代わりに
+  // フィードバック送信用のダイアログが開いてしまう不具合があった(ユーザー報告
+  // 「抽出ボタンを押すとフィードバックの小ウィンドウが開く」)。対策として、
+  // 該当ラベルのボタンが複数見つかった場合は、入力欄(composer)の座標に最も近い
+  // ものを選ぶ(実際の送信ボタンは常に入力欄のすぐそば(通常は右下)にあるのに対し、
+  // 「フィードバックを送信」ボタンはページ上部など離れた位置にあるため)。
+  function findSendButton(inputEl) {
     const override = bySelectorOverride(STORAGE_KEYS.send);
     if (override) return override;
     const buttons = Array.from(document.querySelectorAll("button")).filter(isVisible);
-    const bySendLabel = buttons.find((b) => {
+    const bySendLabel = buttons.filter((b) => {
       const label = (b.getAttribute("aria-label") || b.title || "").toLowerCase();
       return label.includes("send") || label.includes("送信");
     });
-    console.info(`[cvb:${SITE}] findSendButton: ${bySendLabel ? describeEl(bySendLabel) : "見つからず(Enterキー送信にフォールバック)"}`);
-    return bySendLabel || null;
+    let chosen = null;
+    if (bySendLabel.length > 1 && inputEl) {
+      const inputRect = inputEl.getBoundingClientRect();
+      const inputCenter = { x: inputRect.left + inputRect.width / 2, y: inputRect.top + inputRect.height / 2 };
+      chosen = bySendLabel.reduce((closest, b) => {
+        const r = b.getBoundingClientRect();
+        const c = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+        const dist = Math.hypot(c.x - inputCenter.x, c.y - inputCenter.y);
+        if (!closest || dist < closest.dist) return { el: b, dist };
+        return closest;
+      }, null).el;
+      console.info(
+        `[cvb:${SITE}] findSendButton: "送信"系ラベルのボタンが${bySendLabel.length}件見つかったため、入力欄に最も近いものを採用 -> `,
+        bySendLabel.map(describeEl)
+      );
+    } else {
+      chosen = bySendLabel[0] || null;
+    }
+    console.info(`[cvb:${SITE}] findSendButton: ${chosen ? describeEl(chosen) : "見つからず(Enterキー送信にフォールバック)"}`);
+    return chosen;
   }
 
   function findMessageBlocks() {
@@ -158,7 +185,7 @@
   }
 
   function submitComposer(el) {
-    const sendBtn = findSendButton();
+    const sendBtn = findSendButton(el);
     if (sendBtn && sendBtn.disabled) {
       console.warn(`[cvb:${SITE}] submitComposer: 送信ボタンは見つかったがdisabled状態(入力欄の状態更新が反映される前に押している可能性)`);
     }
