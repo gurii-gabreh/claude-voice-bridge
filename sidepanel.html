@@ -403,6 +403,14 @@
     <button class="panel-tab" id="panel-tab-list" type="button">📋 一覧</button>
   </div>
 
+  <!-- 2026-09-13不具合修正: 以前は#statusが#voice-mode-panel内にあり、一覧モード
+       タブ(#list-mode-panel)を表示中はvoice-mode-panelごとdisplay:noneになるため、
+       一覧モードのボタン(GitHub同期・JSONから読み込む等)を押した結果のステータス
+       文言が実際には更新されていても画面上は不可視だった(ユーザー報告「ボタンを
+       押しても反応が無い」)。ボイス/一覧どちらのタブでも見えるよう、両パネルの
+       外(共通領域)へ移動した。 -->
+  <div id="status">停止中(オーブをクリックして開始)</div>
+
   <div id="voice-mode-panel">
     <p class="sub">オーブをクリックで起動。「Claude」または「Gemini」と呼びかけると、そのAIに切り替わって会話が始まります。</p>
 
@@ -417,7 +425,6 @@
       <div class="telemetry mono" id="telemetry-bl"></div>
       <div id="state-tag">IDLE</div>
     </div>
-    <div id="status">停止中(オーブをクリックして開始)</div>
     <button id="mic-permission-btn" type="button" style="display:none">マイクの許可ページを開く</button>
 
     <div id="log"></div>
