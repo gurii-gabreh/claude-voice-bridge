@@ -13,7 +13,7 @@
  * 方針をユーザーが選択)。PATもclaude-voice-bridgeリポジトリのみのアクセス権限で
  * 発行し、study-app用PATとは分離する(最小権限・影響範囲の分離のため)。
  *
- * このGASは2つのアクションを扱う:
+ * このGASは3つのアクションを扱う:
  * 1. saveTracker: 「☁️ GitHubへ同期」ボタンを押した時だけ、その時点のトラッカー
  *    全体(TrackerStore.getData())をdata/tracker.jsonへまるごと上書き保存する
  *    (継続的な自動同期にすると、常時監視で頻繁に更新されるデータの度に大量の
@@ -24,6 +24,12 @@
  *    まるごと送るとcommitがどんどん肥大化するため、あえて1件ずつにしている)。
  *    音声応答(Voiceモード)・常時監視からはこのアクションは呼ばない(2026-09-13、
  *    ユーザー指示「Voiceモードは今まで通りに」「音声は除外してよい」)。
+ * 3. saveRoomLog: 2026-09-17追加。background.jsのchrome.alarmsが1日1回自動で
+ *    呼び出す。RoomLogStore(常時監視で溜まった生ログ)の未送信分をまとめて
+ *    data/room-log.jsonのentries配列へ追記する(複数件をバッチで送る点が
+ *    saveKnowledgeとの違い)。この「生データの集約(JSONデータ1)」を、別途
+ *    週次のRoutineがAIで読み込んで判断し、data/weekly-digest.json(JSONデータ2)へ
+ *    要約結果を書き込む、という3段構成の2段目にあたる。
  *
  * ---- デプロイ手順 ----
  * 1. https://script.google.com で新規プロジェクトを作成し、このファイルの内容を貼る。
@@ -42,6 +48,7 @@
 const GITHUB_API = 'https://api.github.com';
 const TRACKER_PATH = 'data/tracker.json';
 const KNOWLEDGE_LOG_PATH = 'data/knowledge-log.json';
+const ROOM_LOG_PATH = 'data/room-log.json';
 
 function getConfig_() {
   const p = PropertiesService.getScriptProperties();
@@ -144,6 +151,21 @@ function saveKnowledge_(entry) {
   });
 }
 
+// background.jsのchrome.alarmsから1日1回呼ばれる。RoomLogStoreの未送信分
+// (複数件)をまとめてdata/room-log.jsonのentries配列へ追記する。
+function saveRoomLog_(entries) {
+  return withRetry_(() => {
+    const { sha, data } = ghGetJson_(ROOM_LOG_PATH);
+    const log = data || { entries: [] };
+    log.entries = log.entries || [];
+    const existingIds = new Set(log.entries.map((e) => e.id));
+    entries.forEach((entry) => {
+      if (!existingIds.has(entry.id)) log.entries.push(entry); // 同じidの再送は無視(重複防止)
+    });
+    ghPut_(ROOM_LOG_PATH, log, sha, `room-log: ${entries.length}件を自動同期`);
+  });
+}
+
 function doPost(e) {
   let result = { status: 'error', message: 'unknown action' };
   try {
@@ -153,6 +175,9 @@ function doPost(e) {
       result = { status: 'ok' };
     } else if (body.action === 'saveKnowledge') {
       saveKnowledge_(body.entry || {});
+      result = { status: 'ok' };
+    } else if (body.action === 'saveRoomLog') {
+      saveRoomLog_(body.entries || []);
       result = { status: 'ok' };
     }
   } catch (err) {

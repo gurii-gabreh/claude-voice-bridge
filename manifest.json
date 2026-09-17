@@ -3,7 +3,7 @@
   "name": "Claude Voice Bridge",
   "version": "0.6.0",
   "description": "claude.ai / Gemini との会話を音声で行うための拡張機能。サイドパネルのオーブで話すと入力欄へ自動入力・送信し、応答を読み上げます。「Claude」「Gemini」と呼びかけて対象AIを切り替えられます。",
-  "permissions": ["sidePanel", "activeTab", "scripting", "storage", "unlimitedStorage"],
+  "permissions": ["sidePanel", "activeTab", "scripting", "storage", "unlimitedStorage", "alarms"],
   "host_permissions": ["https://claude.ai/*", "https://gemini.google.com/*"],
   "background": {
     "service_worker": "background.js"
