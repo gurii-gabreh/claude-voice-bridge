@@ -43,12 +43,32 @@
     {
       "id": "1789300000004_b3e7f",
       "kind": "未完了作業",
-      "summary": "ルーム情報集約の3段構成のうち②(GAS未デプロイのため自動同期が未稼働)・③(週次Routine未作成、対象セッション未確定)が残課題 【タスクID:4】",
+      "summary": "ルーム情報集約の3段構成のうち②(GAS未デプロイのため自動同期が未稼働)が残課題。③は週次Routine(trig_01Gvk1AGN7sr5F7b9qJW8haD)を作成済み 【タスクID:4】",
       "quote": "サイドアプリの同期を自動でやるのは課題として残っていたよな",
       "uncertain": false,
       "status": "active",
       "source": { "mode": "claude", "title": "", "url": "" },
       "createdAt": "2026-09-18T00:00:00.000Z"
+    },
+    {
+      "id": "1789300000005_c4f8a",
+      "kind": "未完了作業",
+      "summary": "ハッカソン情報収集強化の取り組みをダッシュボードで開けるタスクとして登録する作業が未着手 【タスクID:5】",
+      "quote": "さっきのハッカーソンの情報収集部分もタスク化して再度アプリに開けるようにしろ",
+      "uncertain": false,
+      "status": "active",
+      "source": { "mode": "claude", "title": "", "url": "" },
+      "createdAt": "2026-09-18T00:00:01.000Z"
+    },
+    {
+      "id": "1789300000006_d5a9b",
+      "kind": "未完了作業",
+      "summary": "週次Routine(生ログ→AI要約→JSON2)のパターンを他リポジトリでも作れるようスキル化する作業が未着手 【タスクID:6】",
+      "quote": "今作った週次Routine(生ログ→AI要約→JSON2)のような仕組みを、他のリポジトリでも作れるようにする手順",
+      "uncertain": false,
+      "status": "active",
+      "source": { "mode": "claude", "title": "", "url": "" },
+      "createdAt": "2026-09-18T00:00:02.000Z"
     }
   ]
 }
