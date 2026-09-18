@@ -53,20 +53,20 @@
     {
       "id": "1789300000005_c4f8a",
       "kind": "未完了作業",
-      "summary": "ハッカソン情報収集強化の取り組みをダッシュボードで開けるタスクとして登録する作業が未着手 【タスクID:5】",
+      "summary": "ハッカソン情報収集強化をPTD-065として登録・ダッシュボードで開けるようにした(commit 76c30e9) 【タスクID:5】",
       "quote": "さっきのハッカーソンの情報収集部分もタスク化して再度アプリに開けるようにしろ",
       "uncertain": false,
-      "status": "active",
+      "status": "done",
       "source": { "mode": "claude", "title": "", "url": "" },
       "createdAt": "2026-09-18T00:00:01.000Z"
     },
     {
       "id": "1789300000006_d5a9b",
       "kind": "未完了作業",
-      "summary": "週次Routine(生ログ→AI要約→JSON2)のパターンを他リポジトリでも作れるようスキル化する作業が未着手 【タスクID:6】",
+      "summary": "weekly-log-digest-routineスキルとして作成済み(progress-tracker-dashboard、commit 9094abc) 【タスクID:6】",
       "quote": "今作った週次Routine(生ログ→AI要約→JSON2)のような仕組みを、他のリポジトリでも作れるようにする手順",
       "uncertain": false,
-      "status": "active",
+      "status": "done",
       "source": { "mode": "claude", "title": "", "url": "" },
       "createdAt": "2026-09-18T00:00:02.000Z"
     }
