@@ -149,12 +149,18 @@
     if (!block) return null;
     const body = block[1].trim();
     if (!body || body.includes("未解決の項目はありません")) return [];
-    const lineRe = /種別:\s*(相談|未完了作業)\s*\|\s*内容:\s*(.+?)\s*\|\s*引用:\s*"(.*?)"\s*\|\s*不確実:\s*(はい|いいえ)/;
+    // 2026-09-19修正: 以前はbody.split(/\r?\n/)で行ごとに区切ってから各行に1回だけ
+    // マッチさせていたが、ページ上のMarkdown番号付きリストをtextContentで抽出すると
+    // <li>要素間に必ずしも改行文字が入らず、複数件が1行に連結されてしまうことがあり、
+    // その場合match()(gフラグ無し)は最初の1件しか拾えず「4件あるのに1件しか
+    // 出ない」不具合が起きていた。改行の有無に依存しないよう、本文全体に対して
+    // グローバル検索で全件抽出する方式に変更。
+    const itemRe = /種別:\s*(相談|未完了作業)\s*\|\s*内容:\s*(.+?)\s*\|\s*引用:\s*"(.*?)"\s*\|\s*不確実:\s*(はい|いいえ)/g;
     const items = [];
-    body.split(/\r?\n/).forEach((line) => {
-      const m = line.match(lineRe);
-      if (m) items.push({ kind: m[1], summary: m[2].trim(), quote: m[3], uncertain: m[4] === "はい" });
-    });
+    let m;
+    while ((m = itemRe.exec(body)) !== null) {
+      items.push({ kind: m[1], summary: m[2].trim(), quote: m[3], uncertain: m[4] === "はい" });
+    }
     return items;
   }
 
