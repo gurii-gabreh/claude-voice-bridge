@@ -19,6 +19,7 @@
   const selSend = document.getElementById("sel-send");
   const selMessage = document.getElementById("sel-message");
   const phraseButtonsEl = document.getElementById("phrase-buttons");
+  const skillPhraseButtonsEl = document.getElementById("skill-phrase-buttons");
   const phraseEditorEl = document.getElementById("phrase-editor");
   const phraseSaveBtn = document.getElementById("phrase-save");
   const micPermissionBtn = document.getElementById("mic-permission-btn");
@@ -310,11 +311,17 @@
     // 登録する。「🔍 抽出」ボタンは自動送信するが、こちらは入力欄に入れるだけで
     // 送信はしない(定例文ボタン共通の仕様。文言を確認・編集してから自分で送りたい場合用)。
     // AUDIT_TRIGGER_TEXTと同じ文言にすること(値を変えたら両方直す)。
-    { label: "ルームタスク監査を呼び出す(送信はしない)", text: "【ルームタスク抽出】room-task-auditスキルを呼び出して実行してください。" },
+    { label: "ルームタスク監査を呼び出す(送信はしない)", text: "【ルームタスク抽出】room-task-auditスキルを呼び出して実行してください。", type: "skill" },
   ];
   // 注意: 既にcvb_templates(ユーザーがカスタマイズ済みの定例文)がchrome.storage.localに
   // 保存されている場合、上記DEFAULT_TEMPLATESの追加分はそちらに上書きされ表示されない
   // (下の initTemplates 参照)。その場合は「定例文を編集」から手動で追記が必要。
+
+  // ラベル行の末尾に " [skill]" が付いている場合、type: "skill"(別の折りたたみ
+  // 「🔧 スキル呼び出し文言」に表示)として扱う(2026-09-19追加、ユーザー指示
+  // 「スキルの文言については、別の折りたたみにしろ」)。手動編集(テキストエリア)
+  // でもこのマーカーを付ければスキル側に振り分けられる。
+  const SKILL_LABEL_SUFFIX = " [skill]";
 
   function parseTemplatesText(raw) {
     const lines = raw.split("\n");
@@ -334,14 +341,21 @@
       .filter(Boolean)
       .map((block) => {
         const blockLines = block.split("\n");
-        const label = blockLines[0].trim();
+        let label = blockLines[0].trim();
         const text = blockLines.slice(1).join("\n").trim() || label;
-        return { label, text };
+        let type;
+        if (label.endsWith(SKILL_LABEL_SUFFIX)) {
+          label = label.slice(0, -SKILL_LABEL_SUFFIX.length).trim();
+          type = "skill";
+        }
+        return type ? { label, text, type } : { label, text };
       });
   }
 
   function templatesToText(templates) {
-    return templates.map((t) => `${t.label}\n${t.text}`).join("\n---\n");
+    return templates
+      .map((t) => `${t.label}${t.type === "skill" ? SKILL_LABEL_SUFFIX : ""}\n${t.text}`)
+      .join("\n---\n");
   }
 
   // ---- 状態管理 ----
@@ -1043,17 +1057,21 @@
 
   // 2026-09-18変更、ユーザー指示「定例文の内容は、実際に入力する文言をそのまま表示で
   // よい」: 以前はt.label(説明文)をボタンに表示していたが、実際に入力される文言
-  // (t.text)をそのまま(長ければ省略して)表示するよう変更した。ホバー時のtitleは
-  // 引き続き全文を表示する。
+  // (t.text)を表示するよう変更した。
+  // 2026-09-19変更、ユーザー指示「定例文は、省略せずに全体を表示しろ」「スキルの
+  // 文言については、別の折りたたみにしろ」: 24文字での省略表示をやめ全文表示に、
+  // またtype:"skill"の定例文(スキル呼び出しフレーズ)は#phrase-buttonsではなく
+  // 別の折りたたみ(#skill-phrase-buttons、「🔧 スキル呼び出し文言」)へ分離した。
   function renderTemplateButtons(templates) {
     phraseButtonsEl.innerHTML = "";
+    skillPhraseButtonsEl.innerHTML = "";
     templates.forEach((t) => {
       const btn = document.createElement("button");
       btn.className = "phrase-btn";
-      btn.textContent = t.text.length > 24 ? t.text.slice(0, 24) + "…" : t.text;
+      btn.textContent = t.text;
       btn.title = t.text;
       btn.addEventListener("click", () => insertTextToPage(t.text));
-      phraseButtonsEl.appendChild(btn);
+      (t.type === "skill" ? skillPhraseButtonsEl : phraseButtonsEl).appendChild(btn);
     });
   }
 
