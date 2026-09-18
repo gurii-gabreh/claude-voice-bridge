@@ -14,7 +14,7 @@ chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((e) =>
 // sidepanel.jsのCVB_GAS_URLと同じ値をここにも定義する(service workerは
 // sidepanel.jsとJSの実行コンテキストが別のため、定数を共有できない。デプロイ後は
 // 両方の値を揃えて更新すること)。
-const CVB_GAS_URL = ""; // デプロイ後、発行されたWebアプリURLをここにも設定する
+const CVB_GAS_URL = "https://script.google.com/macros/s/AKfycbwo94DdC2eg0LFpfISBtca7gfZt0CuUnI4fb7apfxE2mP256AAD39S_6NxyzGrL6ps/exec"; // 2026-09-18デプロイ
 
 const ALARM_NAME = "cvb-daily-room-log-sync";
 const ROOM_LOG_KEY = "cvb_room_log";

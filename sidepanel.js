@@ -91,7 +91,7 @@
   // GitHubのdata/tracker.json・data/knowledge-log.jsonへの書き込みを担う。
   // study-appのGAS_URLとは別の、この拡張機能専用のGASプロジェクトのURLを設定する。
   // 2026-09-13追加、ユーザー指示。
-  const CVB_GAS_URL = ''; // デプロイ後、発行されたWebアプリURLをここに設定する
+  const CVB_GAS_URL = 'https://script.google.com/macros/s/AKfycbwo94DdC2eg0LFpfISBtca7gfZt0CuUnI4fb7apfxE2mP256AAD39S_6NxyzGrL6ps/exec'; // 2026-09-18デプロイ
 
   // 「🔍 ルームタスク一覧を抽出」ボタン1回分の抽出結果を、data/knowledge-log.jsonへ
   // 1件だけ追記する(要約せず全文。「次同じようなことや開発に活かしたい、無駄な
