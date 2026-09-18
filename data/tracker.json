@@ -1,10 +1,10 @@
 {
   "items": [
     {
-      "id": 1,
+      "id": 9,
       "kind": "未完了作業",
-      "summary": "タスクID1(抽出のdata-alluvium修正)の拡張機能再読み込み後の実機再確認待ち 【タスクID:1】",
-      "quote": "ai-research-radardeprecate...のような的外れな文言が出なくなったか",
+      "summary": "パース修正(全件抽出化、commit 780d560)後、一覧タブに全件表示されるかの実機再確認待ち 【タスクID:1】",
+      "quote": "一覧タブに4件(またはその時点の実際の件数)がすべて表示される",
       "uncertain": false,
       "status": "active",
       "source": {
@@ -12,7 +12,49 @@
         "title": "Claude Code",
         "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
-      "createdAt": 1789745952144
+      "createdAt": 1789746598468
+    },
+    {
+      "id": 10,
+      "kind": "未完了作業",
+      "summary": "タスクID2(ステータス表示位置修正)の実機再確認待ち 【タスクID:2】",
+      "quote": "パネルにステータスメッセージがちゃんと表示されましたか",
+      "uncertain": false,
+      "status": "active",
+      "source": {
+        "mode": "claude",
+        "title": "Claude Code",
+        "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
+      },
+      "createdAt": 1789746598468
+    },
+    {
+      "id": 11,
+      "kind": "未完了作業",
+      "summary": "タスクID3(タスクID表示・出現箇所巡回機能)の実機再確認待ち 【タスクID:3】",
+      "quote": "連続クリックで次の出現箇所に移動しましたか",
+      "uncertain": false,
+      "status": "active",
+      "source": {
+        "mode": "claude",
+        "title": "Claude Code",
+        "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
+      },
+      "createdAt": 1789746598468
+    },
+    {
+      "id": 12,
+      "kind": "未完了作業",
+      "summary": "定例文の全文表示化・スキル呼び出し文言の折りたたみ分離が意図通りか実機確認待ち 【タスクID:4】",
+      "quote": "サイドパネル下部の「📌 定例文」を開くと確認できます",
+      "uncertain": false,
+      "status": "active",
+      "source": {
+        "mode": "claude",
+        "title": "Claude Code",
+        "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
+      },
+      "createdAt": 1789746598468
     }
   ]
 }
