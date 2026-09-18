@@ -334,6 +334,14 @@
     color: var(--ink-soft);
     margin-bottom: 8px;
   }
+  #tracker-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
   #phrase-buttons {
     display: flex;
     flex-direction: column;
@@ -445,10 +453,11 @@
     <p class="sub">「🔍 抽出」を押すと、AIがこのルームを直接読み返し、未解決の相談・未完了の作業を一覧化します(通常の会話ターンが1往復増えます)。</p>
     <div id="action-row">
       <button id="extract-room-btn" type="button">🔍 ルームタスク一覧を抽出</button>
-      <button id="sync-github-btn" type="button">☁️ GitHubへ同期</button>
+      <button id="sync-github-btn" type="button">☁️ タスク一覧→JSONへ同期</button>
       <button id="load-tracker-json-btn" type="button" title="タスク一覧と定例文の両方を、GitHub上の最新内容に更新します">📥 JSONから一覧を読み込む</button>
     </div>
     <div id="tracker-section">
+      <div id="tracker-section-label">タスク一覧</div>
       <div class="section-title">📋 未解決の相談・進行中のタスク(見逃し防止)</div>
       <table id="tracker-table">
         <thead>
