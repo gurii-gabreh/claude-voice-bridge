@@ -278,7 +278,15 @@
     { label: "役割・基本ルールを確認", text: "まずdata/claude-core-rules.mdを読んでから回答してください。" },
     { label: "仮想的な話であることを明示", text: "これは仮想的な話です。" },
     { label: "根拠を明示させる", text: "根拠となる情報を明示した上で回答してください。" },
+    // 2026-09-18追加、ユーザー指示: room-task-auditスキルの起動フレーズを定例文にも
+    // 登録する。「🔍 抽出」ボタンは自動送信するが、こちらは入力欄に入れるだけで
+    // 送信はしない(定例文ボタン共通の仕様。文言を確認・編集してから自分で送りたい場合用)。
+    // AUDIT_TRIGGER_TEXTと同じ文言にすること(値を変えたら両方直す)。
+    { label: "ルームタスク監査を呼び出す(送信はしない)", text: "【ルームタスク抽出】room-task-auditスキルを呼び出して実行してください。" },
   ];
+  // 注意: 既にcvb_templates(ユーザーがカスタマイズ済みの定例文)がchrome.storage.localに
+  // 保存されている場合、上記DEFAULT_TEMPLATESの追加分はそちらに上書きされ表示されない
+  // (下の initTemplates 参照)。その場合は「定例文を編集」から手動で追記が必要。
 
   function parseTemplatesText(raw) {
     const lines = raw.split("\n");
