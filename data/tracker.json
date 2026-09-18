@@ -43,7 +43,7 @@
     {
       "id": "1789300000004_b3e7f",
       "kind": "未完了作業",
-      "summary": "ルーム情報集約の3段構成のうち②(GAS未デプロイのため自動同期が未稼働)が残課題。③は週次Routine(trig_01Gvk1AGN7sr5F7b9qJW8haD)を作成済み 【タスクID:4】",
+      "summary": "GASデプロイ完了、CVB_GAS_URL設定済み(commit 7c7c0b2)。②③とも設定は揃ったが実機での動作確認(GitHub同期ボタン・自動同期・週次要約)がまだ 【タスクID:4】",
       "quote": "サイドアプリの同期を自動でやるのは課題として残っていたよな",
       "uncertain": false,
       "status": "active",
