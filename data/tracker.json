@@ -7,7 +7,11 @@
       "quote": "送信ボタンをクリック",
       "uncertain": false,
       "status": "done",
-      "source": { "mode": "claude", "title": "", "url": "" },
+      "source": {
+        "mode": "claude",
+        "title": "",
+        "url": ""
+      },
       "createdAt": "2026-09-13T00:00:00.000Z"
     },
     {
@@ -17,7 +21,11 @@
       "quote": "編集を受け入れるSonnet 5高速モード：オフ",
       "uncertain": false,
       "status": "active",
-      "source": { "mode": "claude", "title": "", "url": "" },
+      "source": {
+        "mode": "claude",
+        "title": "",
+        "url": ""
+      },
       "createdAt": "2026-09-13T00:00:01.000Z"
     },
     {
@@ -27,7 +35,11 @@
       "quote": "「📥 JSONから一覧を読み込む」を押してみてください",
       "uncertain": false,
       "status": "active",
-      "source": { "mode": "claude", "title": "", "url": "" },
+      "source": {
+        "mode": "claude",
+        "title": "",
+        "url": ""
+      },
       "createdAt": "2026-09-13T00:00:02.000Z"
     },
     {
@@ -37,7 +49,11 @@
       "quote": "拡張機能を再読み込み→タブをリロードして確認していただけますか",
       "uncertain": false,
       "status": "active",
-      "source": { "mode": "claude", "title": "", "url": "" },
+      "source": {
+        "mode": "claude",
+        "title": "",
+        "url": ""
+      },
       "createdAt": "2026-09-13T00:00:03.000Z"
     },
     {
@@ -47,7 +63,11 @@
       "quote": "サイドアプリの同期を自動でやるのは課題として残っていたよな",
       "uncertain": false,
       "status": "active",
-      "source": { "mode": "claude", "title": "", "url": "" },
+      "source": {
+        "mode": "claude",
+        "title": "",
+        "url": ""
+      },
       "createdAt": "2026-09-18T00:00:00.000Z"
     },
     {
@@ -57,7 +77,11 @@
       "quote": "さっきのハッカーソンの情報収集部分もタスク化して再度アプリに開けるようにしろ",
       "uncertain": false,
       "status": "done",
-      "source": { "mode": "claude", "title": "", "url": "" },
+      "source": {
+        "mode": "claude",
+        "title": "",
+        "url": ""
+      },
       "createdAt": "2026-09-18T00:00:01.000Z"
     },
     {
@@ -67,7 +91,11 @@
       "quote": "今作った週次Routine(生ログ→AI要約→JSON2)のような仕組みを、他のリポジトリでも作れるようにする手順",
       "uncertain": false,
       "status": "done",
-      "source": { "mode": "claude", "title": "", "url": "" },
+      "source": {
+        "mode": "claude",
+        "title": "",
+        "url": ""
+      },
       "createdAt": "2026-09-18T00:00:02.000Z"
     }
   ]
