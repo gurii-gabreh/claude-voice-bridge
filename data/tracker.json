@@ -1,102 +1,18 @@
 {
   "items": [
     {
-      "id": "1789300000000_a1b2c",
+      "id": 1,
       "kind": "未完了作業",
-      "summary": "findSendButton()の呼び出し元(submitComposer)を入力欄に最も近いボタンを選ぶよう修正済み(commit c8d531c)",
-      "quote": "送信ボタンをクリック",
-      "uncertain": false,
-      "status": "done",
-      "source": {
-        "mode": "claude",
-        "title": "",
-        "url": ""
-      },
-      "createdAt": "2026-09-13T00:00:00.000Z"
-    },
-    {
-      "id": "1789300000001_d3e4f",
-      "kind": "未完了作業",
-      "summary": "応答抽出が無関係な文言(ツールバー→重複除去の取りこぼし→サイドバーのセッション一覧文言、と3種類の別原因で発生)を拾う不具合が繰り返し発生。根本原因はヒューリスティック(文言/位置による推測)頼りだったこと。ユーザーのDevTools調査で判明した`data-alluvium=\"true\"`属性(claude.ai/codeが実際のメッセージ本文に付与している確実な目印)を検出の最優先手段に変更(commit 6dc7eb6、7e23e92でmainへマージ済み)。拡張機能の再読み込み後の実機再確認が未完了 【タスクID:1】",
-      "quote": "編集を受け入れるSonnet 5高速モード：オフ",
+      "summary": "タスクID1(抽出のdata-alluvium修正)の拡張機能再読み込み後の実機再確認待ち 【タスクID:1】",
+      "quote": "ai-research-radardeprecate...のような的外れな文言が出なくなったか",
       "uncertain": false,
       "status": "active",
       "source": {
         "mode": "claude",
-        "title": "",
-        "url": ""
+        "title": "Claude Code",
+        "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
-      "createdAt": "2026-09-13T00:00:01.000Z"
-    },
-    {
-      "id": "1789300000002_f5a6b",
-      "kind": "未完了作業",
-      "summary": "「📥 JSONから一覧を読み込む」「☁️ GitHubへ同期」を押しても反応が無いと報告あり。原因は#status要素が#voice-mode-panel内にあり一覧モードタブでは丸ごとdisplay:noneになっていたため(処理自体は動いていたが結果が不可視だった)。#statusを両モード共通領域へ移動して修正済みだが実機再確認が未完了 【タスクID:2】",
-      "quote": "「📥 JSONから一覧を読み込む」を押してみてください",
-      "uncertain": false,
-      "status": "active",
-      "source": {
-        "mode": "claude",
-        "title": "",
-        "url": ""
-      },
-      "createdAt": "2026-09-13T00:00:02.000Z"
-    },
-    {
-      "id": "1789300000003_a1c2d",
-      "kind": "未完了作業",
-      "summary": "タスクID表示への変更・連続クリックでの出現箇所巡回機能の実機動作確認がまだ 【タスクID:3】",
-      "quote": "拡張機能を再読み込み→タブをリロードして確認していただけますか",
-      "uncertain": false,
-      "status": "active",
-      "source": {
-        "mode": "claude",
-        "title": "",
-        "url": ""
-      },
-      "createdAt": "2026-09-13T00:00:03.000Z"
-    },
-    {
-      "id": "1789300000004_b3e7f",
-      "kind": "未完了作業",
-      "summary": "GASデプロイ完了、CVB_GAS_URL設定済み(commit 7c7c0b2)。ユーザーが「☁️ タスク一覧→JSONへ同期」「🔍 抽出」を押した際、GAS経由でGitHubへ実際にコミット(f89ee6d/455e8b6/6689f98、押下時刻2026-09-19 00:23-00:24 JSTと一致)されたことを確認。②(GitHub同期)の実機動作は確認完了 【タスクID:4】",
-      "quote": "サイドアプリの同期を自動でやるのは課題として残っていたよな",
-      "uncertain": false,
-      "status": "done",
-      "source": {
-        "mode": "claude",
-        "title": "",
-        "url": ""
-      },
-      "createdAt": "2026-09-18T00:00:00.000Z"
-    },
-    {
-      "id": "1789300000005_c4f8a",
-      "kind": "未完了作業",
-      "summary": "ハッカソン情報収集強化をPTD-065として登録・ダッシュボードで開けるようにした(commit 76c30e9) 【タスクID:5】",
-      "quote": "さっきのハッカーソンの情報収集部分もタスク化して再度アプリに開けるようにしろ",
-      "uncertain": false,
-      "status": "done",
-      "source": {
-        "mode": "claude",
-        "title": "",
-        "url": ""
-      },
-      "createdAt": "2026-09-18T00:00:01.000Z"
-    },
-    {
-      "id": "1789300000006_d5a9b",
-      "kind": "未完了作業",
-      "summary": "weekly-log-digest-routineスキルとして作成済み(progress-tracker-dashboard、commit 9094abc) 【タスクID:6】",
-      "quote": "今作った週次Routine(生ログ→AI要約→JSON2)のような仕組みを、他のリポジトリでも作れるようにする手順",
-      "uncertain": false,
-      "status": "done",
-      "source": {
-        "mode": "claude",
-        "title": "",
-        "url": ""
-      },
-      "createdAt": "2026-09-18T00:00:02.000Z"
+      "createdAt": 1789745952144
     }
   ]
 }
