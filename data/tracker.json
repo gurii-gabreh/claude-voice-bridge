@@ -39,6 +39,16 @@
       "status": "active",
       "source": { "mode": "claude", "title": "", "url": "" },
       "createdAt": "2026-09-13T00:00:03.000Z"
+    },
+    {
+      "id": "1789300000004_b3e7f",
+      "kind": "未完了作業",
+      "summary": "ルーム情報集約の3段構成のうち②(GAS未デプロイのため自動同期が未稼働)・③(週次Routine未作成、対象セッション未確定)が残課題 【タスクID:4】",
+      "quote": "サイドアプリの同期を自動でやるのは課題として残っていたよな",
+      "uncertain": false,
+      "status": "active",
+      "source": { "mode": "claude", "title": "", "url": "" },
+      "createdAt": "2026-09-18T00:00:00.000Z"
     }
   ]
 }
