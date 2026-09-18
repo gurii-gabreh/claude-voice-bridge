@@ -147,6 +147,21 @@
         console.warn(`[cvb:${SITE}] invalid selector override for message`, e);
       }
     }
+    // 2026-09-18追加(不具合修正・確定対応): これまでの3回の不具合(ツールバー文言の
+    // 誤抽出→重複除去の誤判定→サイドバーのセッション一覧らしき文言の誤抽出)は、
+    // いずれも汎用のdiv/article+文字数という推測ベースの検出方式が根本原因だった。
+    // ユーザーがDevToolsで実際のメッセージ本文を確認したところ、claude.ai/codeの
+    // メッセージ本文は`data-alluvium="true"`という専用のdata属性を持つ要素で
+    // まとめられていることが判明した(サイドバー・ツールバー等には付かない、
+    // メッセージ本文専用のマーカーと考えられる)。この属性が見つかる場合はそれを
+    // 最優先で使い、推測ベースの汎用ヒューリスティックは使わない(Geminiなど
+    // この属性を持たないサイトでは、これまで通り汎用ヒューリスティックにフォールバック
+    // する)。
+    const alluviumBlocks = Array.from(document.querySelectorAll('[data-alluvium="true"]'));
+    if (alluviumBlocks.length > 0) {
+      console.info(`[cvb:${SITE}] findMessageBlocks: data-alluvium属性で${alluviumBlocks.length}件検出`);
+      return alluviumBlocks;
+    }
     // 2026-09-13追記(不具合修正・確定対応): position:fixed除外・重複除去の位置判定と
     // 2回対策を重ねても、実際のユーザーのログで3回連続、この同じ操作バーの文言
     // (モデル名・高速モード切替・編集承認ボタンをまとめた固定のUI文言)が
