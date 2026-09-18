@@ -253,22 +253,50 @@
   // 取得するだけ)。
   const TRACKER_JSON_RAW_URL =
     "https://raw.githubusercontent.com/gurii-gabreh/claude-voice-bridge/main/data/tracker.json";
+  // 2026-09-18追加、ユーザー指示「JSONから一覧を取得を押すと定例文も更新できるように。
+  // 新規のスキルが追加された時に定例文に追加してほしい」。定例文の正本
+  // (data/templates.json)も同じボタンで一緒に取得・反映する(ボタンを分けず1回の
+  // 操作で両方最新化できるようにするため)。
+  const TEMPLATES_JSON_RAW_URL =
+    "https://raw.githubusercontent.com/gurii-gabreh/claude-voice-bridge/main/data/templates.json";
   loadTrackerJsonBtn.addEventListener("click", async () => {
     setStatus("GitHub上のJSONを読み込み中…");
+    let trackerCount = null;
+    let templatesUpdated = false;
     try {
       const res = await fetch(`${TRACKER_JSON_RAW_URL}?t=${Date.now()}`, { cache: "no-store" });
       if (!res.ok) {
-        setStatus(`JSONの取得に失敗しました(HTTP ${res.status})`, "error");
+        setStatus(`トラッカーJSONの取得に失敗しました(HTTP ${res.status})`, "error");
         return;
       }
       const json = await res.json();
       window.TrackerStore.loadFromGithubItems(json.items || []);
-      const count = (json.items || []).filter((i) => (i.status || "active") !== "done").length;
-      setStatus(`GitHub上のJSONから読み込みました(未完了${count}件)`);
+      trackerCount = (json.items || []).filter((i) => (i.status || "active") !== "done").length;
     } catch (e) {
-      console.log("[cvb-panel] JSONの読み込みに失敗:", e);
-      setStatus("JSONの読み込みに失敗しました(通信エラー)", "error");
+      console.log("[cvb-panel] トラッカーJSONの読み込みに失敗:", e);
+      setStatus("トラッカーJSONの読み込みに失敗しました(通信エラー)", "error");
+      return;
     }
+    try {
+      const tRes = await fetch(`${TEMPLATES_JSON_RAW_URL}?t=${Date.now()}`, { cache: "no-store" });
+      if (tRes.ok) {
+        const tJson = await tRes.json();
+        if (Array.isArray(tJson.templates) && tJson.templates.length) {
+          await chrome.storage.local.set({ cvb_templates: tJson.templates });
+          renderTemplateButtons(tJson.templates);
+          phraseEditorEl.value = templatesToText(tJson.templates);
+          templatesUpdated = true;
+        }
+      } else {
+        console.log("[cvb-panel] 定例文JSONの取得に失敗:", tRes.status);
+      }
+    } catch (e) {
+      // 定例文の更新はトラッカー読み込みの成否に影響しないので、失敗してもwarnのみ
+      console.log("[cvb-panel] 定例文JSONの読み込みに失敗:", e);
+    }
+    setStatus(
+      `GitHub上のJSONから読み込みました(未完了${trackerCount}件${templatesUpdated ? "、定例文も更新" : ""})`
+    );
   });
 
   // テンプレートは { label, text } の配列。textは複数行の長文も可。
@@ -1013,13 +1041,17 @@
     }
   }
 
+  // 2026-09-18変更、ユーザー指示「定例文の内容は、実際に入力する文言をそのまま表示で
+  // よい」: 以前はt.label(説明文)をボタンに表示していたが、実際に入力される文言
+  // (t.text)をそのまま(長ければ省略して)表示するよう変更した。ホバー時のtitleは
+  // 引き続き全文を表示する。
   function renderTemplateButtons(templates) {
     phraseButtonsEl.innerHTML = "";
     templates.forEach((t) => {
       const btn = document.createElement("button");
       btn.className = "phrase-btn";
-      btn.textContent = t.label;
-      btn.title = t.text.length > 40 ? t.text.slice(0, 40) + "…" : t.text;
+      btn.textContent = t.text.length > 24 ? t.text.slice(0, 24) + "…" : t.text;
+      btn.title = t.text;
       btn.addEventListener("click", () => insertTextToPage(t.text));
       phraseButtonsEl.appendChild(btn);
     });
