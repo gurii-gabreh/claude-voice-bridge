@@ -4,6 +4,7 @@
     { "label": "役割・基本ルールを確認", "text": "まずdata/claude-core-rules.mdを読んでから回答してください。" },
     { "label": "仮想的な話であることを明示", "text": "これは仮想的な話です。" },
     { "label": "根拠を明示させる", "text": "根拠となる情報を明示した上で回答してください。" },
-    { "label": "ルームタスク監査を呼び出す(送信はしない)", "text": "【ルームタスク抽出】room-task-auditスキルを呼び出して実行してください。", "type": "skill" }
+    { "label": "ルームタスク監査を呼び出す(送信はしない)", "text": "【ルームタスク抽出】room-task-auditスキルを呼び出して実行してください。", "type": "skill" },
+    { "label": "servicenow-sub-agentの調査ナレッジを確認", "text": "servicenow sub agentの調査結果/ナレッジを見て回答してください。", "type": "skill" }
   ]
 }
