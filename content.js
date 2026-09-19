@@ -35,6 +35,19 @@
   // 走らないようにする。
   let sendInFlight = false;
 
+  // 2026-09-19追加(不具合修正): 「🔍 抽出」ボタン(cvb-extract-room-text)は、
+  // 押すたびに画面に見えている発言を毎回まるごと返していたため、同じ会話中に
+  // 何度も押すとRoomLogStore(→room-log.json→週次ナレッジ要約Routine)・
+  // knowledge-log.jsonの双方に内容が重複して蓄積される不具合があった
+  // (ユーザー指摘「週次のルーティンの目的は私の傾向用ナレッジのため、差分を
+  // 常にjsonデータに取り込む仕様にしたい」)。ボイス応答(seenMessageCount)・
+  // 常時監視(passiveSeenCount)と同様、このボタン専用の「前回この経路で
+  // 送った件数」を覚えておき、差分のみを返すようにする。なお
+  // room-task-auditスキルの呼び出し(cvb-send-text、未解決課題の監査)は
+  // この変更の対象外(ユーザー指示「抽出の方は今まで通り未解決の部分のみ
+  // 抽出で良い」)。
+  let manualExtractSeenCount = 0;
+
   function bySelectorOverride(key) {
     const sel = localStorage.getItem(key);
     if (!sel) return null;
@@ -376,10 +389,16 @@
     }
     if (msg.type === "cvb-extract-room-text") {
       // 「ルームタスク一覧」ボタン用: 常時監視(cvb-passive-message)を待たず、
-      // 今このタブに見えている発言を全てその場で抽出して返す(2026-09-13追加、
-      // ユーザー指示「ボタンを押したらルーム内の文言を吸い出し、タスクを一覧化」)。
+      // その場で抽出して返す(2026-09-13追加、ユーザー指示「ボタンを押したら
+      // ルーム内の文言を吸い出し、タスクを一覧化」)。
+      // 2026-09-19修正: 以前は毎回「今見えている発言を全部」返しており、同じ
+      // 会話中に何度も押すとRoomLogStore/knowledge-log.jsonに内容が重複して
+      // 蓄積される不具合があったため、manualExtractSeenCountで「前回この経路で
+      // 返した件数」を覚え、差分(新規分)のみを返すようにした。
       const blocks = findMessageBlocks();
-      const text = blocks.map((b) => b.textContent.trim()).filter(Boolean).join("\n");
+      const newBlocks = blocks.slice(manualExtractSeenCount);
+      manualExtractSeenCount = blocks.length;
+      const text = newBlocks.map((b) => b.textContent.trim()).filter(Boolean).join("\n");
       sendResponse({ ok: true, text, title: document.title, url: location.href });
       return true;
     }
