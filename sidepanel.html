@@ -362,6 +362,30 @@
     word-break: break-word;
   }
   .phrase-btn:hover { border-color: var(--accent); }
+  /* 2026-09-19追加、ユーザー指示「?マークを追加してクリックしたら説明を表示」:
+     スキル呼び出し文言のボタンと❓アイコンを横並びにし、クリックで説明を開閉する。 */
+  .phrase-row { display: flex; align-items: stretch; gap: 6px; }
+  .phrase-row .phrase-btn { flex: 1 1 auto; min-width: 0; }
+  .phrase-help-btn {
+    flex: 0 0 auto;
+    width: 28px;
+    background: var(--surface);
+    color: var(--ink-soft);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .phrase-help-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .phrase-desc {
+    font-size: 11px;
+    color: var(--ink-soft);
+    background: var(--surface);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin-top: -2px;
+  }
 
   #phrase-editor {
     width: 100%;

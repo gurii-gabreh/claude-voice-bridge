@@ -1068,6 +1068,11 @@
   // 文言については、別の折りたたみにしろ」: 24文字での省略表示をやめ全文表示に、
   // またtype:"skill"の定例文(スキル呼び出しフレーズ)は#phrase-buttonsではなく
   // 別の折りたたみ(#skill-phrase-buttons、「🔧 スキル呼び出し文言」)へ分離した。
+  // 2026-09-19変更、ユーザー指示「?マークを追加してそれをクリックしたら
+  // ショウウィンドウ(説明)を表示にして」: スキル呼び出し文言(type:"skill")に
+  // description(どういう時に使うか)がある場合、ボタンの横に❓アイコンを表示し、
+  // クリックで説明の開閉をトグルする(ホバーはモバイル=タッチデバイスでは
+  // 使えないため、PC/モバイル共通でクリック/タップ方式に統一した)。
   function renderTemplateButtons(templates) {
     phraseButtonsEl.innerHTML = "";
     skillPhraseButtonsEl.innerHTML = "";
@@ -1077,7 +1082,29 @@
       btn.textContent = t.text;
       btn.title = t.text;
       btn.addEventListener("click", () => insertTextToPage(t.text));
-      (t.type === "skill" ? skillPhraseButtonsEl : phraseButtonsEl).appendChild(btn);
+
+      if (t.type === "skill" && t.description) {
+        const row = document.createElement("div");
+        row.className = "phrase-row";
+        const helpBtn = document.createElement("button");
+        helpBtn.type = "button";
+        helpBtn.className = "phrase-help-btn";
+        helpBtn.textContent = "❓";
+        helpBtn.title = "この文言の使いどころを表示";
+        const descEl = document.createElement("div");
+        descEl.className = "phrase-desc";
+        descEl.textContent = t.description;
+        descEl.style.display = "none";
+        helpBtn.addEventListener("click", () => {
+          descEl.style.display = descEl.style.display === "none" ? "block" : "none";
+        });
+        row.appendChild(btn);
+        row.appendChild(helpBtn);
+        skillPhraseButtonsEl.appendChild(row);
+        skillPhraseButtonsEl.appendChild(descEl);
+      } else {
+        (t.type === "skill" ? skillPhraseButtonsEl : phraseButtonsEl).appendChild(btn);
+      }
     });
   }
 
