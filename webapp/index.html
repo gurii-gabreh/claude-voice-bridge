@@ -88,6 +88,44 @@
   section {
     margin-bottom: 22px;
   }
+  /* 2026-09-19追加: PC版サイドパネルと同じ折りたたみスタイル(見出しをやや
+     大きく、開閉が分かる矢印アイコン付き)。定例文・スキル呼び出し文言・
+     使い方・JSON管理方法に共通で使う。 */
+  .collapsible-block { margin-bottom: 16px; }
+  .collapsible-summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    padding: 8px 2px;
+    list-style: none;
+    cursor: pointer;
+  }
+  .collapsible-summary::-webkit-details-marker { display: none; }
+  .collapsible-summary::before {
+    content: "▶";
+    display: inline-block;
+    font-size: 10px;
+    color: var(--accent);
+    transition: transform 0.15s ease;
+  }
+  .collapsible-block[open] > .collapsible-summary::before {
+    transform: rotate(90deg);
+  }
+  .collapsible-body {
+    padding: 4px 2px 2px;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .collapsible-body p { margin: 0 0 8px; }
+  .collapsible-body code {
+    background: var(--surface);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 11px;
+  }
   .section-title {
     font-size: 12px;
     font-weight: 700;
@@ -153,6 +191,16 @@
   <h1>Claude Voice Bridge — タスク一覧(Web版)</h1>
   <p class="sub">サイドパネル拡張機能と同じGitHub上のデータを表示・更新できる、モバイル対応ページです。</p>
 
+  <details class="collapsible-block">
+    <summary class="collapsible-summary">❓ このページの使い方</summary>
+    <div class="collapsible-body">
+      <p><strong>① タスク一覧</strong>: ページを開くと自動で最新のタスク一覧が表示されます。「🔄 最新の状態に更新」で再取得できます(見るだけで書き込みは発生しません)。</p>
+      <p><strong>② room-task-auditの出力を貼り付けて反映</strong>: claude.aiのモバイルアプリ/サイトで直接「【ルームタスク抽出】room-task-auditスキルを呼び出して実行してください。」と送り、返ってきた回答全文をこのページの貼り付け欄へ貼ります。「📥 一覧に反映」で画面のタスク一覧が更新されます(この時点ではまだこの端末内だけの表示)。「☁️ タスク一覧→JSONへ同期」を押すと、GitHub上の<code>tracker.json</code>に実際に書き込まれ、他の端末(拡張機能のサイドパネルも含む)からも見えるようになります。</p>
+      <p><strong>③ 📌定例文 / 🔧スキル呼び出し文言</strong>: タップするとその文言がクリップボードにコピーされます(このページには操作対象の入力欄が無いため、コピーしてclaude.aiの入力欄に自分で貼り付けてください)。</p>
+      <p><strong>注意</strong>: タスクIDをタップしてルーム内の該当箇所へジャンプする機能は、ブラウザ拡張機能が必要なためこのページにはありません。②は「一覧に反映」だけでは同期されません。必ず「☁️ タスク一覧→JSONへ同期」まで押してください。</p>
+    </div>
+  </details>
+
   <button id="refresh-btn" type="button">🔄 最新の状態に更新</button>
   <div id="refresh-status"></div>
 
@@ -161,6 +209,17 @@
     <div id="tracker-list"></div>
     <div id="tracker-empty" style="display:none;">未解決のタスクはありません。</div>
   </section>
+
+  <details class="collapsible-block">
+    <summary class="collapsible-summary">📦 タスク一覧のJSON管理方法</summary>
+    <div class="collapsible-body">
+      <p>タスク一覧(未解決の相談・作業)は、PC版(サイドパネル拡張機能)とモバイル版(このページ)の両方から更新でき、どちらも同じGitHub上の<code>data/tracker.json</code>を共有しています。</p>
+      <p><strong>PC版</strong>: 「🔍 抽出」を押すとroom-task-auditスキルがルームを最初から読み返し、その時点の未解決タスクだけで一覧を丸ごと置き換えます(ローカル表示のみ)。「☁️ タスク一覧→JSONへ同期」でGitHubへ書き込みます。</p>
+      <p><strong>モバイル版</strong>: 上記②の通り、貼り付けた回答で一覧を丸ごと置き換えます(差分ではありません)。同期ボタンも同じ仕組みです。</p>
+      <p><strong>重複・競合</strong>: どちらも「丸ごと置き換え」方式のため重複登録はされません。ただしPC・モバイルが別々の内容を持ったまま両方同期すると、後から同期した方が前の内容を完全に上書きします(マージはしない仕様、2026-09-19確認済み)。</p>
+      <p><strong>生ログとの違い</strong>: 上記のtracker.jsonとは別に、会話の生ログは<code>room-log.json</code>/<code>knowledge-log.json</code>へ「前回から増えた分だけ」を差分方式で蓄積し、週次Routineがそのうち前回処理した時点より新しい分だけをAIが判断して<code>weekly-digest.json</code>(傾向分析用の永続ナレッジ)へ要約を追記します。</p>
+    </div>
+  </details>
 
   <section>
     <div class="section-title">📝 room-task-auditの出力を貼り付けて反映</div>
@@ -173,15 +232,19 @@
     <div id="audit-status"></div>
   </section>
 
-  <section>
-    <div class="section-title">📌 定例文(タップでコピー)</div>
-    <div id="phrase-list" class="phrase-list"></div>
-  </section>
+  <details class="collapsible-block">
+    <summary class="collapsible-summary">📌 定例文(タップでコピー)</summary>
+    <div class="collapsible-body">
+      <div id="phrase-list" class="phrase-list"></div>
+    </div>
+  </details>
 
-  <section>
-    <div class="section-title">🔧 スキル呼び出し文言(タップでコピー)</div>
-    <div id="skill-phrase-list" class="phrase-list"></div>
-  </section>
+  <details class="collapsible-block">
+    <summary class="collapsible-summary">🔧 スキル呼び出し文言(タップでコピー)</summary>
+    <div class="collapsible-body">
+      <div id="skill-phrase-list" class="phrase-list"></div>
+    </div>
+  </details>
 
   <footer id="last-updated"></footer>
 

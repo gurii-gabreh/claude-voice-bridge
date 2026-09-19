@@ -393,6 +393,46 @@
     color: var(--ink-soft);
   }
   summary { cursor: pointer; }
+
+  /* 2026-09-19追加、ユーザー指示「定例文とスキル呼び出し文章の文言はもう少し
+     大きくし、クリックすると折りたたみが表示されるのがわかるようにアイコンを
+     追加しろ」: タスク一覧・定例文・スキル呼び出し文言・JSON管理方法などの
+     主要な折りたたみに共通のスタイル(見出しをやや大きく、開閉が分かる
+     矢印アイコン付き)を適用する。 */
+  .collapsible-block { margin-bottom: 10px; }
+  .collapsible-summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    padding: 6px 2px;
+    list-style: none;
+  }
+  .collapsible-summary::-webkit-details-marker { display: none; }
+  .collapsible-summary::before {
+    content: "▶";
+    display: inline-block;
+    font-size: 10px;
+    color: var(--accent);
+    transition: transform 0.15s ease;
+  }
+  .collapsible-block[open] > .collapsible-summary::before {
+    transform: rotate(90deg);
+  }
+  .collapsible-body {
+    padding: 4px 2px 2px;
+    font-size: 11.5px;
+    line-height: 1.6;
+  }
+  .collapsible-body p { margin: 0 0 8px; }
+  .collapsible-body code {
+    background: var(--surface);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 10.5px;
+  }
   input[type="text"] {
     width: 100%;
     margin-top: 6px;
@@ -469,30 +509,44 @@
         <tbody id="tracker-tbody"></tbody>
       </table>
     </div>
+    <details class="collapsible-block">
+      <summary class="collapsible-summary">📦 タスク一覧のJSON管理方法</summary>
+      <div class="collapsible-body">
+        <p>タスク一覧(未解決の相談・作業)は、PC版(この拡張機能)とモバイル版(Web版)の両方から更新でき、どちらも同じGitHub上の<code>data/tracker.json</code>を共有しています。</p>
+        <p><strong>PC版</strong>: 「🔍 抽出」を押すとroom-task-auditスキルがルームを最初から読み返し、その時点の未解決タスクだけで一覧を丸ごと置き換えます(ローカル表示のみ)。「☁️ タスク一覧→JSONへ同期」でGitHubへ書き込みます。</p>
+        <p><strong>モバイル版</strong>: claude.aiで直接room-task-auditを呼び出し、その回答をモバイル版ページに貼り付けると、PC版と同じ「その時点の未解決タスク全部」で置き換わります。同期ボタンも同じ仕組みです。</p>
+        <p><strong>重複・競合</strong>: どちらも「丸ごと置き換え」方式のため重複登録はされません。ただしPC・モバイルが別々の内容を持ったまま両方同期すると、後から同期した方が前の内容を完全に上書きします(マージはしない仕様、2026-09-19確認済み)。</p>
+        <p><strong>生ログとの違い</strong>: 上記のtracker.jsonとは別に、会話の生ログは<code>room-log.json</code>/<code>knowledge-log.json</code>へ「前回から増えた分だけ」を差分方式で蓄積し、週次Routineがそのうち前回処理した時点より新しい分だけをAIが判断して<code>weekly-digest.json</code>(傾向分析用の永続ナレッジ)へ要約を追記します。</p>
+      </div>
+    </details>
   </div>
 
   <div id="phrases-section">
-    <details>
-      <summary class="section-title" style="display:inline-block;margin-bottom:0;">📌 定例文(押すと入力欄に反映、送信は自分で押す)</summary>
-      <div id="phrase-buttons"></div>
-      <details>
-        <summary>🔧 スキル呼び出し文言</summary>
-        <div id="skill-phrase-buttons"></div>
-      </details>
-      <details>
-        <summary>定例文を編集</summary>
-        <p style="margin:6px 0;font-size:11px;color:var(--ink-soft)">
-          1つのテンプレート = 1行目がボタンの名前、2行目以降が実際に入力欄へ反映される本文(複数行OK)。
-          テンプレート同士は「---」だけの行で区切ってください。
-        </p>
-        <textarea id="phrase-editor" rows="10" placeholder="ボタン名1
+    <details class="collapsible-block">
+      <summary class="collapsible-summary">📌 定例文(押すと入力欄に反映、送信は自分で押す)</summary>
+      <div class="collapsible-body">
+        <div id="phrase-buttons"></div>
+        <details>
+          <summary>定例文を編集</summary>
+          <p style="margin:6px 0;font-size:11px;color:var(--ink-soft)">
+            1つのテンプレート = 1行目がボタンの名前、2行目以降が実際に入力欄へ反映される本文(複数行OK)。
+            テンプレート同士は「---」だけの行で区切ってください。
+          </p>
+          <textarea id="phrase-editor" rows="10" placeholder="ボタン名1
 本文1行目
 本文2行目
 ---
 ボタン名2
 本文(長文もOK)"></textarea>
-        <button id="phrase-save">保存</button>
-      </details>
+          <button id="phrase-save">保存</button>
+        </details>
+      </div>
+    </details>
+    <details class="collapsible-block">
+      <summary class="collapsible-summary">🔧 スキル呼び出し文言(押すと入力欄に反映)</summary>
+      <div class="collapsible-body">
+        <div id="skill-phrase-buttons"></div>
+      </div>
     </details>
   </div>
 
