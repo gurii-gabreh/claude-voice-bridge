@@ -1,10 +1,10 @@
 {
   "items": [
     {
-      "id": 9,
-      "kind": "未完了作業",
-      "summary": "パース修正(全件抽出化、commit 780d560)後、一覧タブに全件表示されるかの実機再確認待ち 【タスクID:1】",
-      "quote": "一覧タブに4件(またはその時点の実際の件数)がすべて表示される",
+      "id": 1,
+      "kind": "相談",
+      "summary": "週次ログ要約Routineの動作確認方法(次の日曜自然発火を待つか、今すぐfire_triggerで試験実行するか)が未回答 【タスクID:1】",
+      "quote": "次の日本時間日曜0時の自然発火を待ちますか、それとも今",
       "uncertain": false,
       "status": "active",
       "source": {
@@ -12,13 +12,13 @@
         "title": "Claude Code",
         "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
-      "createdAt": 1789746598468
+      "createdAt": 1789824160970
     },
     {
-      "id": 10,
+      "id": 2,
       "kind": "未完了作業",
-      "summary": "タスクID2(ステータス表示位置修正)の実機再確認待ち 【タスクID:2】",
-      "quote": "パネルにステータスメッセージがちゃんと表示されましたか",
+      "summary": "「🔍 抽出」ボタンの重複防止修正(manualExtractSeenCount)の実機での複数回押下確認がまだ 【タスクID:2】",
+      "quote": "実装しただけで実際に2回続けて押した実機確認はまだです",
       "uncertain": false,
       "status": "active",
       "source": {
@@ -26,13 +26,13 @@
         "title": "Claude Code",
         "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
-      "createdAt": 1789746598468
+      "createdAt": 1789824160970
     },
     {
-      "id": 11,
+      "id": 3,
       "kind": "未完了作業",
-      "summary": "タスクID3(タスクID表示・出現箇所巡回機能)の実機再確認待ち 【タスクID:3】",
-      "quote": "連続クリックで次の出現箇所に移動しましたか",
+      "summary": "PC版UI改修(❓アイコン・折りたたみ再構成・タスク一覧のJSON管理方法ウィジェット等)の拡張機能再読み込み後の実機確認がまだ 【タスクID:3】",
+      "quote": "両方セットでお願いします",
       "uncertain": false,
       "status": "active",
       "source": {
@@ -40,21 +40,7 @@
         "title": "Claude Code",
         "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
-      "createdAt": 1789746598468
-    },
-    {
-      "id": 12,
-      "kind": "未完了作業",
-      "summary": "定例文の全文表示化・スキル呼び出し文言の折りたたみ分離が意図通りか実機確認待ち 【タスクID:4】",
-      "quote": "サイドパネル下部の「📌 定例文」を開くと確認できます",
-      "uncertain": false,
-      "status": "active",
-      "source": {
-        "mode": "claude",
-        "title": "Claude Code",
-        "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
-      },
-      "createdAt": 1789746598468
+      "createdAt": 1789824160970
     }
   ]
 }
