@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Voice Bridge — タスク一覧(Web版)</title>
+<style>
+  :root {
+    --bg: #0b1418;
+    --surface: #12232a;
+    --panel-border: #234049;
+    --ink: #e7f6f2;
+    --ink-soft: #9fb8bb;
+    --accent: #35e0c0;
+    --danger: #ff7a7a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 16px;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  h1 {
+    font-size: 15px;
+    letter-spacing: 0.03em;
+    margin: 0 0 4px;
+  }
+  .sub {
+    color: var(--ink-soft);
+    font-size: 12px;
+    margin: 0 0 14px;
+  }
+  #refresh-btn {
+    width: 100%;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    background: var(--accent);
+    color: #04222b;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 6px;
+  }
+  #refresh-status {
+    color: var(--ink-soft);
+    font-size: 11.5px;
+    margin-bottom: 18px;
+    min-height: 1.4em;
+  }
+  section {
+    margin-bottom: 22px;
+  }
+  .section-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+  #tracker-list { display: flex; flex-direction: column; gap: 8px; }
+  .task-card {
+    background: var(--surface);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .task-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+  .task-status {
+    font-size: 10.5px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    border: 1px solid var(--panel-border);
+  }
+  .task-status.active { color: var(--accent); border-color: var(--accent); }
+  .task-status.done { color: var(--ink-soft); }
+  .task-summary { font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+  .task-room { color: var(--ink-soft); font-size: 11px; margin-top: 4px; }
+  #tracker-empty { color: var(--ink-soft); font-size: 12.5px; }
+
+  .phrase-list { display: flex; flex-direction: column; gap: 6px; }
+  .phrase-btn {
+    text-align: left;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: normal;
+    word-break: break-word;
+  }
+  .phrase-btn:active { border-color: var(--accent); }
+  .phrase-btn.copied { border-color: var(--accent); color: var(--accent); }
+
+  footer {
+    color: var(--ink-soft);
+    font-size: 10.5px;
+    margin-top: 24px;
+    padding-top: 10px;
+    border-top: 1px solid var(--panel-border);
+  }
+</style>
+</head>
+<body>
+
+  <h1>Claude Voice Bridge — タスク一覧(Web版)</h1>
+  <p class="sub">サイドパネル拡張機能と同じGitHub上のデータを表示する、閲覧専用のモバイル対応ページです。</p>
+
+  <button id="refresh-btn" type="button">🔄 最新の状態に更新</button>
+  <div id="refresh-status"></div>
+
+  <section>
+    <div class="section-title">📋 タスク一覧</div>
+    <div id="tracker-list"></div>
+    <div id="tracker-empty" style="display:none;">未解決のタスクはありません。</div>
+  </section>
+
+  <section>
+    <div class="section-title">📌 定例文(タップでコピー)</div>
+    <div id="phrase-list" class="phrase-list"></div>
+  </section>
+
+  <section>
+    <div class="section-title">🔧 スキル呼び出し文言(タップでコピー)</div>
+    <div id="skill-phrase-list" class="phrase-list"></div>
+  </section>
+
+  <footer id="last-updated"></footer>
+
+<script>
+  // このページはdata/tracker.json・data/templates.jsonをGitHub Pages経由で
+  // 読み込むだけの閲覧専用ページ(2026-09-19追加、ユーザー指示「携帯で見るように、
+  // サイドアプリの一覧部分だけをwebアプリで見えるようにしたい」)。書き込み・
+  // GitHubへの同期(POST)は行わない。「🔄 最新の状態に更新」は、GitHub上の
+  // 最新JSONを再取得して画面を再描画するだけ(キャッシュバスティングのみ)。
+  // タスクIDクリックでのページ内ジャンプ(拡張機能のcontent.js依存機能)は、
+  // ブラウザ拡張機能が無いと成立しないためこのページには実装していない。
+
+  const trackerListEl = document.getElementById("tracker-list");
+  const trackerEmptyEl = document.getElementById("tracker-empty");
+  const phraseListEl = document.getElementById("phrase-list");
+  const skillPhraseListEl = document.getElementById("skill-phrase-list");
+  const refreshBtn = document.getElementById("refresh-btn");
+  const refreshStatusEl = document.getElementById("refresh-status");
+  const lastUpdatedEl = document.getElementById("last-updated");
+
+  function renderTracker(items) {
+    trackerListEl.innerHTML = "";
+    const activeItems = (items || []).filter((i) => (i.status || "active") !== "done");
+    trackerEmptyEl.style.display = activeItems.length ? "none" : "block";
+    activeItems.forEach((item) => {
+      const card = document.createElement("div");
+      card.className = "task-card";
+      const head = document.createElement("div");
+      head.className = "task-card-head";
+      const idSpan = document.createElement("span");
+      idSpan.textContent = "タスクID: " + (item.id ?? "");
+      const statusSpan = document.createElement("span");
+      statusSpan.className = "task-status " + ((item.status || "active") === "done" ? "done" : "active");
+      statusSpan.textContent = (item.status || "active") === "done" ? "完了" : "作業中";
+      head.appendChild(idSpan);
+      head.appendChild(statusSpan);
+      const summary = document.createElement("div");
+      summary.className = "task-summary";
+      summary.textContent = item.summary || "";
+      const room = document.createElement("div");
+      room.className = "task-room";
+      const src = item.source || {};
+      room.textContent = [src.title, src.mode].filter(Boolean).join(" / ") || "";
+      card.appendChild(head);
+      card.appendChild(summary);
+      if (room.textContent) card.appendChild(room);
+      trackerListEl.appendChild(card);
+    });
+  }
+
+  async function copyToClipboard(text, btn) {
+    try {
+      await navigator.clipboard.writeText(text);
+      btn.classList.add("copied");
+      const original = btn.dataset.originalText || btn.textContent;
+      btn.dataset.originalText = original;
+      btn.textContent = "コピーしました";
+      setTimeout(() => {
+        btn.classList.remove("copied");
+        btn.textContent = original;
+      }, 1200);
+    } catch (e) {
+      alert("コピーに失敗しました: " + e.message);
+    }
+  }
+
+  function renderTemplates(templates) {
+    phraseListEl.innerHTML = "";
+    skillPhraseListEl.innerHTML = "";
+    (templates || []).forEach((t) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "phrase-btn";
+      btn.textContent = t.text;
+      btn.addEventListener("click", () => copyToClipboard(t.text, btn));
+      (t.type === "skill" ? skillPhraseListEl : phraseListEl).appendChild(btn);
+    });
+  }
+
+  async function loadAll() {
+    refreshStatusEl.textContent = "読み込み中…";
+    try {
+      const [trackerRes, templatesRes] = await Promise.all([
+        fetch(`data/tracker.json?t=${Date.now()}`, { cache: "no-store" }),
+        fetch(`data/templates.json?t=${Date.now()}`, { cache: "no-store" }),
+      ]);
+      if (trackerRes.ok) {
+        const trackerJson = await trackerRes.json();
+        renderTracker(trackerJson.items || []);
+      } else {
+        refreshStatusEl.textContent = `タスク一覧の取得に失敗しました(HTTP ${trackerRes.status})`;
+      }
+      if (templatesRes.ok) {
+        const templatesJson = await templatesRes.json();
+        renderTemplates(templatesJson.templates || []);
+      }
+      refreshStatusEl.textContent = "";
+      lastUpdatedEl.textContent = "最終更新: " + new Date().toLocaleString("ja-JP");
+    } catch (e) {
+      refreshStatusEl.textContent = "通信エラー: " + e.message;
+    }
+  }
+
+  refreshBtn.addEventListener("click", loadAll);
+  loadAll();
+</script>
+</body>
+</html>

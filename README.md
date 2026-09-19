@@ -81,6 +81,16 @@ claude.ai / Gemini(ブラウザ版)との会話を、音声で行うためのChr
 
 **2026-09-18追加**: 定例文の正本を`data/templates.json`(このリポジトリ)にも置いた。「📥 JSONから一覧を読み込む」ボタン(一覧モード)を押すと、タスク一覧と一緒に定例文もこのファイルの最新内容で上書きされる(`chrome.storage.local`の`cvb_templates`を更新)。新しいスキルの呼び出しフレーズ等を定例文に追加したい場合は、`data/templates.json`を更新してcommit・pushすれば、拡張機能自体の更新なしに各ブラウザへ反映できる。
 
+## モバイル(iPhone等)向けWeb版タスク一覧
+
+2026-09-19追加、ユーザー指示「携帯で見るように、サイドアプリの一覧部分だけをwebアプリで見えるようにしたい」への対応。`webapp/index.html`を`.github/workflows/deploy-pages.yml`でGitHub Pagesへ自動デプロイし、`https://gurii-gabreh.github.io/claude-voice-bridge/`でPC・iPhoneどちらからも閲覧できるようにした。
+
+- データソースは拡張機能と共通の`data/tracker.json`・`data/templates.json`(このリポジトリ)。専用のデータや二重管理は無い。
+- **閲覧専用**。GitHubへの書き込み(タスクの完了操作・定例文の同期POST等)は行わない。「🔄 最新の状態に更新」ボタンは、GitHub上の最新JSONを再取得して画面を再描画するだけ(プル/リフレッシュ)。
+- 拡張機能側にある「タスクIDクリックでclaude.aiページの該当箇所へスクロール」機能は、ブラウザ拡張機能(content.js)が無いと成立しないため、このページには実装していない。
+- 「📌 定例文」「🔧 スキル呼び出し文言」はタップすると該当文言をクリップボードへコピーする(拡張機能側の「入力欄へ反映」とは異なる。このページには操作対象のページ入力欄が存在しないため)。
+- 初回push時、リポジトリでGitHub Pages自体が有効化されていない状態だったため、`actions/configure-pages@v5`に`enablement: true`を付けて自動有効化されるようにしている(ai-research-radar/Knowledge-Dashboardで過去に踏んだ「Pages未有効化でデプロイが毎回失敗する」不具合の再発防止、progress-tracker-dashboardのdata/tasks.jsonに記録された対処法を踏襲)。
+
 ## うまく動かないとき(手動セレクタ設定)
 
 自動検出は「画面下部の入力欄らしき要素」「aria-labelにSend/送信を含むボタン」等のheuristic(推測)で動いています。claude.ai / Gemini側の実装変更等で検出に失敗する場合、以下の手順で手動指定できます。手動セレクタはページのlocalStorageに保存されるため、claude.aiとGeminiそれぞれで別々に設定できます(サイドパネルの「手動セレクタ設定」欄は、そのとき対象になっているタブ=現在のモードに対して読み書きします)。
