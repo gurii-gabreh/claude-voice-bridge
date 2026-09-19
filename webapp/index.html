@@ -52,6 +52,39 @@
     margin-bottom: 18px;
     min-height: 1.4em;
   }
+  #paste-audit {
+    width: 100%;
+    min-height: 90px;
+    padding: 8px;
+    font-size: 12.5px;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 6px;
+  }
+  .btn-row { display: flex; gap: 6px; margin-bottom: 6px; }
+  .btn-row button {
+    flex: 1;
+    padding: 9px;
+    font-size: 12.5px;
+    font-weight: 700;
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    cursor: pointer;
+    background: var(--surface);
+    color: var(--ink);
+  }
+  #apply-audit-btn { border-color: var(--accent); color: var(--accent); }
+  #sync-tracker-btn { border-color: var(--accent); color: var(--accent); }
+  #audit-status {
+    color: var(--ink-soft);
+    font-size: 11.5px;
+    margin-bottom: 4px;
+    min-height: 1.4em;
+  }
   section {
     margin-bottom: 22px;
   }
@@ -118,7 +151,7 @@
 <body>
 
   <h1>Claude Voice Bridge — タスク一覧(Web版)</h1>
-  <p class="sub">サイドパネル拡張機能と同じGitHub上のデータを表示する、閲覧専用のモバイル対応ページです。</p>
+  <p class="sub">サイドパネル拡張機能と同じGitHub上のデータを表示・更新できる、モバイル対応ページです。</p>
 
   <button id="refresh-btn" type="button">🔄 最新の状態に更新</button>
   <div id="refresh-status"></div>
@@ -127,6 +160,17 @@
     <div class="section-title">📋 タスク一覧</div>
     <div id="tracker-list"></div>
     <div id="tracker-empty" style="display:none;">未解決のタスクはありません。</div>
+  </section>
+
+  <section>
+    <div class="section-title">📝 room-task-auditの出力を貼り付けて反映</div>
+    <p class="sub" style="margin-bottom:6px;">claude.aiのモバイルアプリ/サイト上で直接「【ルームタスク抽出】room-task-auditスキルを呼び出して実行してください。」と送り、返ってきた回答全文(<code>[ROOM-TASK-AUDIT-START]〜[ROOM-TASK-AUDIT-END]</code>を含む)をそのまま貼り付けてください。</p>
+    <textarea id="paste-audit" placeholder="[ROOM-TASK-AUDIT-START]&#10;…&#10;[ROOM-TASK-AUDIT-END]"></textarea>
+    <div class="btn-row">
+      <button id="apply-audit-btn" type="button">📥 一覧に反映</button>
+      <button id="sync-tracker-btn" type="button">☁️ タスク一覧→JSONへ同期</button>
+    </div>
+    <div id="audit-status"></div>
   </section>
 
   <section>
@@ -143,12 +187,23 @@
 
 <script>
   // このページはdata/tracker.json・data/templates.jsonをGitHub Pages経由で
-  // 読み込むだけの閲覧専用ページ(2026-09-19追加、ユーザー指示「携帯で見るように、
-  // サイドアプリの一覧部分だけをwebアプリで見えるようにしたい」)。書き込み・
-  // GitHubへの同期(POST)は行わない。「🔄 最新の状態に更新」は、GitHub上の
-  // 最新JSONを再取得して画面を再描画するだけ(キャッシュバスティングのみ)。
+  // 読み込んで表示する(2026-09-19追加、ユーザー指示「携帯で見るように、
+  // サイドアプリの一覧部分だけをwebアプリで見えるようにしたい」)。
+  // 「🔄 最新の状態に更新」は、GitHub上の最新JSONを再取得して画面を再描画する
+  // だけ(キャッシュバスティングのみ、書き込みなし)。
   // タスクIDクリックでのページ内ジャンプ(拡張機能のcontent.js依存機能)は、
   // ブラウザ拡張機能が無いと成立しないためこのページには実装していない。
+  //
+  // 2026-09-19追加(ユーザー指示「Claudeで(room-task-auditを)実行させた内容を
+  // 特定の部分に貼ればjsonを更新できるようにしろ、サイドアプリと同じ動きにしろ」):
+  // 拡張機能の無いモバイル環境(claude.aiのアプリ/サイトを直接使う場合)でも
+  // 同じ結果を得られるよう、room-task-auditの出力テキストを貼り付ける欄を追加。
+  // 「📥 一覧に反映」で解析してこのページの表示を置き換え(サイドパネルの
+  // TrackerStore.setItems()と同じ「丸ごと置き換え」方式)、「☁️ タスク一覧→
+  // JSONへ同期」でGAS経由でdata/tracker.jsonへ書き込む(拡張機能のsyncGithubBtnと
+  // 同じエンドポイント・同じペイロード形式)。
+
+  const CVB_GAS_URL = "https://script.google.com/macros/s/AKfycbwo94DdC2eg0LFpfISBtca7gfZt0CuUnI4fb7apfxE2mP256AAD39S_6NxyzGrL6ps/exec";
 
   const trackerListEl = document.getElementById("tracker-list");
   const trackerEmptyEl = document.getElementById("tracker-empty");
@@ -157,8 +212,15 @@
   const refreshBtn = document.getElementById("refresh-btn");
   const refreshStatusEl = document.getElementById("refresh-status");
   const lastUpdatedEl = document.getElementById("last-updated");
+  const pasteAuditEl = document.getElementById("paste-audit");
+  const applyAuditBtn = document.getElementById("apply-audit-btn");
+  const syncTrackerBtn = document.getElementById("sync-tracker-btn");
+  const auditStatusEl = document.getElementById("audit-status");
+
+  let currentTrackerItems = [];
 
   function renderTracker(items) {
+    currentTrackerItems = items || [];
     trackerListEl.innerHTML = "";
     const activeItems = (items || []).filter((i) => (i.status || "active") !== "done");
     trackerEmptyEl.style.display = activeItems.length ? "none" : "block";
@@ -240,6 +302,66 @@
       refreshStatusEl.textContent = "通信エラー: " + e.message;
     }
   }
+
+  // sidepanel.jsのparseAuditResponse()と同じロジック(2026-09-19修正版:
+  // 改行分割ではなくグローバル正規表現で全件抽出する方式)。room-task-auditの
+  // 出力をMarkdownとして描画・textContent抽出すると<li>間に改行が入らず複数件が
+  // 1行に連結されることがあるため、改行の有無に依存しない実装にしている。
+  function parseAuditResponse(text) {
+    const block = (text || "").match(/\[ROOM-TASK-AUDIT-START\]([\s\S]*?)\[ROOM-TASK-AUDIT-END\]/);
+    if (!block) return null;
+    const body = block[1].trim();
+    if (!body || body.includes("未解決の項目はありません")) return [];
+    const itemRe = /種別:\s*(相談|未完了作業)\s*\|\s*内容:\s*(.+?)\s*\|\s*引用:\s*"(.*?)"\s*\|\s*不確実:\s*(はい|いいえ)/g;
+    const items = [];
+    let m;
+    while ((m = itemRe.exec(body)) !== null) {
+      items.push({ kind: m[1], summary: m[2].trim(), quote: m[3], uncertain: m[4] === "はい" });
+    }
+    return items;
+  }
+
+  applyAuditBtn.addEventListener("click", () => {
+    const raw = pasteAuditEl.value;
+    const parsed = parseAuditResponse(raw);
+    if (parsed === null) {
+      auditStatusEl.textContent = "解析に失敗しました([ROOM-TASK-AUDIT-START]〜[ROOM-TASK-AUDIT-END]を含む全文を貼り付けてください)";
+      return;
+    }
+    const now = Date.now();
+    const items = parsed.map((raw2, idx) => ({
+      id: `${now}_${idx}`,
+      kind: raw2.kind,
+      summary: raw2.summary,
+      quote: raw2.quote || "",
+      uncertain: !!raw2.uncertain,
+      status: "active",
+      source: { mode: "claude", title: "モバイル貼り付け", url: "" },
+      createdAt: now,
+    }));
+    renderTracker(items);
+    auditStatusEl.textContent = items.length
+      ? `${items.length}件を一覧に反映しました(まだGitHubへは同期されていません。「☁️ タスク一覧→JSONへ同期」を押してください)`
+      : "未解決の項目はありませんでした";
+  });
+
+  syncTrackerBtn.addEventListener("click", async () => {
+    auditStatusEl.textContent = "GitHubへ同期中…";
+    try {
+      const res = await fetch(CVB_GAS_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "saveTracker", tracker: { items: currentTrackerItems } }),
+      });
+      const json = await res.json();
+      if (json.status === "ok") {
+        auditStatusEl.textContent = "GitHubへ同期しました";
+      } else {
+        auditStatusEl.textContent = "GitHub同期エラー: " + (json.message || "不明なエラー");
+      }
+    } catch (e) {
+      auditStatusEl.textContent = "GitHub同期エラー(通信失敗): " + e.message;
+    }
+  });
 
   refreshBtn.addEventListener("click", loadAll);
   loadAll();

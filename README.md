@@ -86,9 +86,10 @@ claude.ai / Gemini(ブラウザ版)との会話を、音声で行うためのChr
 2026-09-19追加、ユーザー指示「携帯で見るように、サイドアプリの一覧部分だけをwebアプリで見えるようにしたい」への対応。`webapp/index.html`を`.github/workflows/deploy-pages.yml`でGitHub Pagesへ自動デプロイし、`https://gurii-gabreh.github.io/claude-voice-bridge/`でPC・iPhoneどちらからも閲覧できるようにした。
 
 - データソースは拡張機能と共通の`data/tracker.json`・`data/templates.json`(このリポジトリ)。専用のデータや二重管理は無い。
-- **閲覧専用**。GitHubへの書き込み(タスクの完了操作・定例文の同期POST等)は行わない。「🔄 最新の状態に更新」ボタンは、GitHub上の最新JSONを再取得して画面を再描画するだけ(プル/リフレッシュ)。
+- 「🔄 最新の状態に更新」ボタンは、GitHub上の最新JSONを再取得して画面を再描画するだけ(プル/リフレッシュ、書き込みなし)。
 - 拡張機能側にある「タスクIDクリックでclaude.aiページの該当箇所へスクロール」機能は、ブラウザ拡張機能(content.js)が無いと成立しないため、このページには実装していない。
 - 「📌 定例文」「🔧 スキル呼び出し文言」はタップすると該当文言をクリップボードへコピーする(拡張機能側の「入力欄へ反映」とは異なる。このページには操作対象のページ入力欄が存在しないため)。
+- **2026-09-19追加(ユーザー指示「Claudeで実行させた内容を特定の部分に貼ればjsonを更新できるようにしろ、サイドアプリと同じ動きにしろ」)**: 拡張機能の無いモバイル環境(claude.aiのアプリ/サイトを直接使う場合)でも同じ結果を得られるよう、「📝 room-task-auditの出力を貼り付けて反映」欄を追加した。claude.ai上で直接room-task-auditスキルを呼び出した回答全文を貼り付けて「📥 一覧に反映」を押すと、サイドパネルの`TrackerStore.setItems()`と同じ「丸ごと置き換え」方式でこのページの表示が更新される(この時点ではまだブラウザ内の表示だけで、GitHubへは書き込まれない)。続けて「☁️ タスク一覧→JSONへ同期」を押すと、拡張機能の同期ボタンと同じGASエンドポイント・同じペイロード形式で`data/tracker.json`へ書き込まれる。
 - 初回push時、リポジトリでGitHub Pages自体が有効化されていない状態だったため、`actions/configure-pages@v5`に`enablement: true`を付けて自動有効化されるようにしている(ai-research-radar/Knowledge-Dashboardで過去に踏んだ「Pages未有効化でデプロイが毎回失敗する」不具合の再発防止、progress-tracker-dashboardのdata/tasks.jsonに記録された対処法を踏襲)。
 
 ## うまく動かないとき(手動セレクタ設定)
