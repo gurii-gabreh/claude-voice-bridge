@@ -1,3 +1,40 @@
 {
-  "entries": []
+  "entries": [
+    {
+      "id": 1,
+      "mode": "",
+      "source": "passive",
+      "text": "9件のスキルを確認しましたが、固定の呼び出しフレーズを持つものだけを追加するのが適切と判断しました。理由を説明します。\n判断結果: 9件中、templates.jsonに追加したのはstudy-session-log(「いつものように記録して」)の1件のみです。追加したもの: room-task-audit・research-knowledge-lookup(既存)+ study-session-log(新規)。いずれも「この一言を送れば起動する」という固定フレーズを持つタイプです。追加しなかったもの: tex-image-extraction・plugin-rollout・sheet-memo-sync・governance-config-sync・research-item-curation・weekly-log-digest-routineの6件。これらは「〇〇を依頼された時にAIが判断して適用する」設計(固定の一言ではなく、状況や依頼内容に応じて発動するもの)なので、定例文ボタンとして押す性質のものではないと判断しました。この判断基準が違う、あるいは特定のスキルを追加してほしい場合は教えてください。push済みなので、PC版は「📥 JSONから一覧を読み込む」、モバイル版は開く/更新するだけで反映されます。\n① 概要の保持について: progress-tracker-dashboardのai-config.json(ai.customSkills.registry/web.customSkills.table)には概要(summary)を保持しています(さっき表形式にした「概要」列がまさにそれです)。一方、claude-voice-bridgeのdata/templates.json(実際にPC/モバイルのボタンに使っている方)には、今のところlabel(ボタン名)とtext(実際に送る文言)しかなく、「どういう時に使うか」の説明フィールドはありません。② 実装案templates.jsonの各スキルエントリにdescription(使いどころの説明)フィールドを追加し、PC版・モバイル版のボタンの下に小さく表示するようにします。例:この内容で進めてよいですか?(表示場所は、ボタンの下に小さめのグレーの説明文、という想定です)\nNow let's update the dashboard.html table rendering to show this as a new column.\nNow update the table rendering JS to add the new column:\nSyntax checks out. Let's commit and merge.\nホバー表示は良い案ですが、PCとモバイルで挙動が変わる点だけ確認させてください。PC: マウスホバーが使えるので、ブラウザ標準のtitle属性(ホバーで吹き出し表示)で実現できます。追加のCSS/JS不要で軽量です。モバイル(スマホ): そもそも「ホバー」という概念がありません(タッチデバイスなので)。ホバー方式にすると、モバイル版では説明を見る手段が無くなってしまいます。なので、以下のいずれかを提案します。PC=ホバー表示、モバイル=ボタン下に小さいグレー文字で常時表示(デバイスごとに最適な方式を使う。ただし見た目が両者で少し変わる)両方とも、ボタン下に小さいグレー文字で常時表示(見た目は統一されるが、ホバーの手軽さは無し)両方とも、タップ/クリックで説明をトグル表示(統一感があり、常時は場所を取らない)どれがいいですか?\nNow let's update the PC extension's rendering logic in sidepanel.js:\nNow let's add the CSS for .phrase-row / .phrase-help-btn / .phrase-desc in sidepanel.html:\nNow let's implement the same pattern in the mobile webapp.\nNow let's add matching CSS to webapp/index.html:\nAll checks pass. Let's commit and push claude-voice-bridge.\nDeploy queued (auto-triggered). 実装・push完了しました。やったことスキル呼び出し文言(type: \"skill\")の各エントリにdescription(使いどころの説明)を追加(3件全部)PC版・モバイル版どちらも、ボタン横に「❓」アイコンを追加。クリック/タップで説明ボックスが開閉します(ホバーはモバイルで使えないため、PC/モバイル共通でクリック方式に統一しました)GitHub Pagesのデプロイも自動で走っています。拡張機能を再読み込み→「📥 JSONから一覧を読み込む」、モバイルは開き直すと反映されます。「🔧 スキル呼び出し文言」の❓マークを押してみてください。\n① スキル呼び出し文言の自動更新について: 2段階の仕組みがあります。私(Claude)の作業ルール: 新しいチャット起動型スキルを作る際、templates.jsonへの追記を必ずセットで行う(ルール27)週次Routineの自動チェック: それでも登録漏れが起きた場合(特にモバイル経由でスキルが作られた時等)に備え、週次Routineが管理対象リポジトリを走査し、未登録のものを自動で追記する「手順B」を追加済みただし、templates.jsonへの追記自体は自動でも、画面への反映は別です。PC版は「📥 JSONから一覧を読み込む」を押す必要があり、モバイル版は開く/更新するだけで自動反映されます。「完全に何もしなくても勝手に更新される」わけではなく、この2点は変わらずユーザー側の一手間が必要です。② 「定例文を編集」の位置について: 確認したところ、既に「定例文」の一番下(ボタン一覧の直後)に配置されていました(先ほどの折りたたみ改修時に、この並び順のまま独立させています)。追加の変更は不要そうです。念のため一度確認してもらえますか?ズレていたら教えてください。\nはい、それで大丈夫ですが、2つとも必要です。拡張機能自体の再読み込み: chrome://extensionsで拡張機能を再読み込み→対象タブ(claude.ai)もリロード。今日変更したコード側(❓アイコン機能・折りたたみの構造変更など)を反映するために必要です「📥 JSONから一覧を読み込む」を押す: これで最新のtemplates.json(study-session-logの追加・各スキルのdescription等)がブラウザに反映されます①だけだとコードは新しくなりますが、ブラウザに保存済みの古い定例文データのままなので❓の説明が空になります。②だけだとデータは最新化されますが、コードが古いままだと❓アイコン自体が表示されません。両方セットでお願いします。",
+      "title": "Claude Code",
+      "ts": 1789824140757,
+      "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
+    },
+    {
+      "id": 2,
+      "mode": "claude",
+      "source": "manual-extract",
+      "text": "9件のスキルを確認しましたが、固定の呼び出しフレーズを持つものだけを追加するのが適切と判断しました。理由を説明します。\n判断結果: 9件中、templates.jsonに追加したのはstudy-session-log(「いつものように記録して」)の1件のみです。追加したもの: room-task-audit・research-knowledge-lookup(既存)+ study-session-log(新規)。いずれも「この一言を送れば起動する」という固定フレーズを持つタイプです。追加しなかったもの: tex-image-extraction・plugin-rollout・sheet-memo-sync・governance-config-sync・research-item-curation・weekly-log-digest-routineの6件。これらは「〇〇を依頼された時にAIが判断して適用する」設計(固定の一言ではなく、状況や依頼内容に応じて発動するもの)なので、定例文ボタンとして押す性質のものではないと判断しました。この判断基準が違う、あるいは特定のスキルを追加してほしい場合は教えてください。push済みなので、PC版は「📥 JSONから一覧を読み込む」、モバイル版は開く/更新するだけで反映されます。\n① 概要の保持について: progress-tracker-dashboardのai-config.json(ai.customSkills.registry/web.customSkills.table)には概要(summary)を保持しています(さっき表形式にした「概要」列がまさにそれです)。一方、claude-voice-bridgeのdata/templates.json(実際にPC/モバイルのボタンに使っている方)には、今のところlabel(ボタン名)とtext(実際に送る文言)しかなく、「どういう時に使うか」の説明フィールドはありません。② 実装案templates.jsonの各スキルエントリにdescription(使いどころの説明)フィールドを追加し、PC版・モバイル版のボタンの下に小さく表示するようにします。例:この内容で進めてよいですか?(表示場所は、ボタンの下に小さめのグレーの説明文、という想定です)\nNow let's update the dashboard.html table rendering to show this as a new column.\nNow update the table rendering JS to add the new column:\nSyntax checks out. Let's commit and merge.\nホバー表示は良い案ですが、PCとモバイルで挙動が変わる点だけ確認させてください。PC: マウスホバーが使えるので、ブラウザ標準のtitle属性(ホバーで吹き出し表示)で実現できます。追加のCSS/JS不要で軽量です。モバイル(スマホ): そもそも「ホバー」という概念がありません(タッチデバイスなので)。ホバー方式にすると、モバイル版では説明を見る手段が無くなってしまいます。なので、以下のいずれかを提案します。PC=ホバー表示、モバイル=ボタン下に小さいグレー文字で常時表示(デバイスごとに最適な方式を使う。ただし見た目が両者で少し変わる)両方とも、ボタン下に小さいグレー文字で常時表示(見た目は統一されるが、ホバーの手軽さは無し)両方とも、タップ/クリックで説明をトグル表示(統一感があり、常時は場所を取らない)どれがいいですか?\nNow let's update the PC extension's rendering logic in sidepanel.js:\nNow let's add the CSS for .phrase-row / .phrase-help-btn / .phrase-desc in sidepanel.html:\nNow let's implement the same pattern in the mobile webapp.\nNow let's add matching CSS to webapp/index.html:\nAll checks pass. Let's commit and push claude-voice-bridge.\nDeploy queued (auto-triggered). 実装・push完了しました。やったことスキル呼び出し文言(type: \"skill\")の各エントリにdescription(使いどころの説明)を追加(3件全部)PC版・モバイル版どちらも、ボタン横に「❓」アイコンを追加。クリック/タップで説明ボックスが開閉します(ホバーはモバイルで使えないため、PC/モバイル共通でクリック方式に統一しました)GitHub Pagesのデプロイも自動で走っています。拡張機能を再読み込み→「📥 JSONから一覧を読み込む」、モバイルは開き直すと反映されます。「🔧 スキル呼び出し文言」の❓マークを押してみてください。\n① スキル呼び出し文言の自動更新について: 2段階の仕組みがあります。私(Claude)の作業ルール: 新しいチャット起動型スキルを作る際、templates.jsonへの追記を必ずセットで行う(ルール27)週次Routineの自動チェック: それでも登録漏れが起きた場合(特にモバイル経由でスキルが作られた時等)に備え、週次Routineが管理対象リポジトリを走査し、未登録のものを自動で追記する「手順B」を追加済みただし、templates.jsonへの追記自体は自動でも、画面への反映は別です。PC版は「📥 JSONから一覧を読み込む」を押す必要があり、モバイル版は開く/更新するだけで自動反映されます。「完全に何もしなくても勝手に更新される」わけではなく、この2点は変わらずユーザー側の一手間が必要です。② 「定例文を編集」の位置について: 確認したところ、既に「定例文」の一番下(ボタン一覧の直後)に配置されていました(先ほどの折りたたみ改修時に、この並び順のまま独立させています)。追加の変更は不要そうです。念のため一度確認してもらえますか?ズレていたら教えてください。\nはい、それで大丈夫ですが、2つとも必要です。拡張機能自体の再読み込み: chrome://extensionsで拡張機能を再読み込み→対象タブ(claude.ai)もリロード。今日変更したコード側(❓アイコン機能・折りたたみの構造変更など)を反映するために必要です「📥 JSONから一覧を読み込む」を押す: これで最新のtemplates.json(study-session-logの追加・各スキルのdescription等)がブラウザに反映されます①だけだとコードは新しくなりますが、ブラウザに保存済みの古い定例文データのままなので❓の説明が空になります。②だけだとデータは最新化されますが、コードが古いままだと❓アイコン自体が表示されません。両方セットでお願いします。",
+      "title": "",
+      "ts": 1789824141989,
+      "url": ""
+    },
+    {
+      "id": 3,
+      "mode": "",
+      "source": "passive",
+      "text": "[ROOM-TASK-AUDIT-START]種別: 相談 | 内容: 週次ログ要約Routineの動作確認方法(次の日曜自然発火を待つか、今すぐfire_triggerで試験実行するか)が未回答 【タスクID:1】 | 引用: \"次の日本時間日曜0時の自然発火を待ちますか、それとも今\" | 不確実: いいえ種別: 未完了作業 | 内容: 「🔍 抽出」ボタンの重複防止修正(manualExtractSeenCount)の実機での複数回押下確認がまだ 【タスクID:2】 | 引用: \"実装しただけで実際に2回続けて押した実機確認はまだです\" | 不確実: いいえ種別: 未完了作業 | 内容: PC版UI改修(❓アイコン・折りたたみ再構成・タスク一覧のJSON管理方法ウィジェット等)の拡張機能再読み込み後の実機確認がまだ 【タスクID:3】 | 引用: \"両方セットでお願いします\" | 不確実: いいえ[ROOM-TASK-AUDIT-END]",
+      "title": "Claude Code",
+      "ts": 1789824163920,
+      "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
+    },
+    {
+      "id": 4,
+      "mode": "",
+      "source": "passive",
+      "text": "確認ありがとうございます。念のため、どこまで確認できたか教えてください。PC版のUI(❓アイコン・折りたたみ再構成・「📦 タスク一覧のJSON管理方法」ウィジェット等): 見た目・動作ともに問題なし、という理解でよいですか?「🔍 抽出」ボタンの重複防止修正: 同じ会話で2回続けて押して、2回目が「新規分だけ」になっているかも確認済みですか、それともこれは別途確認予定ですか?",
+      "title": "Claude Code",
+      "ts": 1789824195468,
+      "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
+    }
+  ]
 }
