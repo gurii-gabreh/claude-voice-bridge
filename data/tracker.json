@@ -1,10 +1,10 @@
 {
   "items": [
     {
-      "id": 13,
+      "id": 1,
       "kind": "未完了作業",
-      "summary": "新タスクID書式でのクリックジャンプ動作が実機で未確認。原因判明: GitHub上のtracker.jsonに taskIdMarker フィールドが一度も保存されておらず(内容欄への文字列埋め込みのみ)、拡張機能が更新版sidepanel.js/tracker-store.js(コミット6558b74)をまだ読み込んでいないことを示す。chrome://extensionsでの再読み込みとタブの再読み込みが必要",
-      "quote": "「【タスクID:1】」がルーム内に見つかりませんでした",
+      "summary": "タスクID書式変更の原因(拡張機能の再読み込み不足)を特定してtracker.json/READMEを修正・pushしたが、実際にタブ再読み込み後にクリックジャンプが直るか未確認 【タスクID:回答09/25 17:25:10-1】",
+      "quote": "既にclaude.aiのタブに挿し込まれているcontent script",
       "uncertain": false,
       "status": "active",
       "source": {
@@ -12,13 +12,13 @@
         "title": "Claude Code",
         "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
-      "createdAt": 1790323375036,
-      "taskIdMarker": "回答09/25 17:20:00-1"
+      "createdAt": 1790323681891,
+      "taskIdMarker": "回答09/25 17:25:10-1"
     },
     {
-      "id": 14,
+      "id": 2,
       "kind": "未完了作業",
-      "summary": "「🔍 抽出」ボタンの重複防止修正(manualExtractSeenCount)の実機での複数回押下確認が未実施",
+      "summary": "「🔍 抽出」ボタンの重複防止修正(manualExtractSeenCount)の実機での複数回押下確認が未実施 【タスクID:回答09/25 17:25:10-2】",
       "quote": "実装しただけで実際に2回続けて押した実機確認はまだです",
       "uncertain": false,
       "status": "active",
@@ -27,13 +27,13 @@
         "title": "Claude Code",
         "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
-      "createdAt": 1790323375036,
-      "taskIdMarker": "回答09/25 17:20:00-2"
+      "createdAt": 1790323681891,
+      "taskIdMarker": "回答09/25 17:25:10-2"
     },
     {
-      "id": 15,
+      "id": 3,
       "kind": "未完了作業",
-      "summary": "PC版UI改修(❓アイコン・折りたたみ再構成・JSON管理方法ウィジェット等)の拡張機能再読み込み後の実機確認が未実施",
+      "summary": "PC版UI改修(❓アイコン・折りたたみ再構成・JSON管理方法ウィジェット等)の拡張機能再読み込み後の実機確認が未実施 【タスクID:回答09/25 17:25:10-3】",
       "quote": "両方セットでお願いします",
       "uncertain": false,
       "status": "active",
@@ -42,13 +42,13 @@
         "title": "Claude Code",
         "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
-      "createdAt": 1790323375036,
-      "taskIdMarker": "回答09/25 17:20:00-3"
+      "createdAt": 1790323681891,
+      "taskIdMarker": "回答09/25 17:25:10-3"
     },
     {
-      "id": 16,
+      "id": 4,
       "kind": "未完了作業",
-      "summary": "週次ログ要約Routineの常駐セッション方式切り替え後、実際の発火(次回2026-09-26予定)での動作確認が未実施",
+      "summary": "週次ログ要約Routineの常駐セッション方式切り替え後、実際の発火(次回2026-09-26予定)での動作確認が未実施 【タスクID:回答09/25 17:25:10-4】",
       "quote": "次回の実発火(2026-09-26 15:04 UTC予定)で正常に動くかどうかはまだ未検証です",
       "uncertain": false,
       "status": "active",
@@ -57,8 +57,8 @@
         "title": "Claude Code",
         "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
-      "createdAt": 1790323375036,
-      "taskIdMarker": "回答09/25 17:20:00-4"
+      "createdAt": 1790323681891,
+      "taskIdMarker": "回答09/25 17:25:10-4"
     }
   ]
 }
