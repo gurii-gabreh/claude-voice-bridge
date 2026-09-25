@@ -6,6 +6,7 @@
     { "label": "根拠を明示させる", "text": "根拠となる情報を明示した上で回答してください。" },
     { "label": "ルームタスク監査を呼び出す(送信はしない)", "text": "【ルームタスク抽出】room-task-auditスキルを呼び出して実行してください。", "type": "skill", "description": "このルーム内で、まだ返事していない相談や、着手したのに完了したと言っていない作業が埋もれていないか確認したい時に使う。" },
     { "label": "servicenow-sub-agentの調査ナレッジを確認", "text": "servicenow sub agentの調査結果/ナレッジを見て回答してください。", "type": "skill", "description": "AI/開発関連の最新動向を、記憶だけでなくservicenow-sub-agentが自動収集した調査データ(research-items.json)を実際に確認した上で答えてほしい時に使う。" },
-    { "label": "自己学習セッションを記録", "text": "いつものように記録して", "type": "skill", "description": "自分で学習した内容(トピック・日付)をまとめたメモを貼って、progress-tracker-dashboardの学習記録(AIE-012〜020)へ残したい時に使う。" }
+    { "label": "自己学習セッションを記録", "text": "いつものように記録して", "type": "skill", "description": "自分で学習した内容(トピック・日付)をまとめたメモを貼って、progress-tracker-dashboardの学習記録(AIE-012〜020)へ残したい時に使う。" },
+    { "label": "新規アプリの構想を始める", "text": "【新規アプリ構想】new-app-kickoffスキルを呼び出して実行してください。", "type": "skill", "description": "新しいアプリのアイデアを検討したい時に使う。基本設定・過去の実装ナレッジ・実績を確認した上で、構想専用の新規ルーム(リポジトリには未紐付け)を作成し、そちらへ構想を引き継ぐ。" }
   ]
 }
