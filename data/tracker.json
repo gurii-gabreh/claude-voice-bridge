@@ -1,21 +1,6 @@
 {
   "items": [
     {
-      "id": 9,
-      "kind": "相談",
-      "summary": "「抽出→JSON同期→JSONから読み込む」の順で空になる件について、今も再現するか・成功メッセージを待ってから次を押したか未回答 【タスクID:回答09/25 17:48:05-1】",
-      "quote": "今もう一度「📥 JSONから一覧を読み込む」を押すと空になりますか",
-      "uncertain": false,
-      "status": "active",
-      "source": {
-        "mode": "claude",
-        "title": "Claude Code",
-        "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
-      },
-      "createdAt": 1790325243093,
-      "taskIdMarker": "回答09/25 17:48:05-1"
-    },
-    {
       "id": 10,
       "kind": "未完了作業",
       "summary": "タスクIDジャンプのwindow.find()方式への修正が、拡張機能再読み込み後に実機で正常動作するか未確認 【タスクID:回答09/25 17:48:05-2】",
