@@ -159,7 +159,22 @@
     const items = [];
     let m;
     while ((m = itemRe.exec(body)) !== null) {
-      items.push({ kind: m[1], summary: m[2].trim(), quote: m[3], uncertain: m[4] === "はい" });
+      const summary = m[2].trim();
+      // 2026-09-25追加、ユーザー指示: タスクIDの実体を【タスクID:回答MM/DD HH:MM:SS-N】
+      // という書式に変更(以前は表示順の連番のみだったが、監査のたびに振り直される
+      // ため、ページ内検索用のキーとしては監査結果自身の回答タイムスタンプ+行番号を
+      // 使う方式にした)。内容(summary)の末尾に埋め込まれているこのマーカーを
+      // ここで抜き出し、ページ内ジャンプ検索用のキーとして別途保持する。旧形式
+      // (【タスクID:N】、数字のみ)しか含まれていない古い監査結果と後方互換を保つため、
+      // 見つからない場合はnullのままにし、呼び出し側で表示順の連番にフォールバックする。
+      const taskIdMatch = summary.match(/【タスクID:(.+?)】/);
+      items.push({
+        kind: m[1],
+        summary,
+        quote: m[3],
+        uncertain: m[4] === "はい",
+        taskIdMarker: taskIdMatch ? taskIdMatch[1] : null,
+      });
     }
     return items;
   }
@@ -677,12 +692,17 @@
       numBtn.className = "tracker-num";
       numBtn.type = "button";
       // 2026-09-13追加(ユーザー指示「種別はタスクIDに変えろ」): 種別ラベルではなく
-      // タスクID(表示順の通し番号、1始まり)を表示する。room-task-auditスキルが
-      // 会話中に埋め込む固定書式【タスクID:N】(SKILL.md参照)のNと一致させる。
-      const taskId = index + 1;
-      numBtn.textContent = `タスクID: ${taskId}`;
+      // タスクID(表示順の通し番号、1始まり)を表示する。
+      // 2026-09-25変更: 表示ラベルは引き続き分かりやすい表示順連番のままにするが、
+      // ページ内検索(クリックジャンプ)には表示位置ではなく、item.taskIdMarker
+      // (【タスクID:回答MM/DD HH:MM:SS-N】から抜き出した実際の値、parseAuditResponse
+      // 参照)を使う。旧形式の監査結果由来でtaskIdMarkerが無い場合のみ、従来通り
+      // 表示順連番を検索キーとして使う(後方互換)。
+      const displayTaskId = index + 1;
+      const searchKey = item.taskIdMarker || String(displayTaskId);
+      numBtn.textContent = `タスクID: ${displayTaskId}`;
       numBtn.title = "クリックでルーム内の該当箇所へ移動(連続クリックで次の出現箇所へ)";
-      numBtn.onclick = () => navigateToTaskId(taskId);
+      numBtn.onclick = () => navigateToTaskId(searchKey);
       numCell.appendChild(numBtn);
 
       tr.querySelector(".tracker-text").textContent = item.summary || "(内容不明)";

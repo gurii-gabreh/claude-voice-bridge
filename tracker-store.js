@@ -33,7 +33,7 @@
   }
 
   // rawItems: room-task-audit スキルの出力をパースした配列
-  // [{ kind, summary, quote, uncertain }, ...]。source: {mode, title, url}(任意)。
+  // [{ kind, summary, quote, uncertain, taskIdMarker }, ...]。source: {mode, title, url}(任意)。
   function setItems(rawItems, source) {
     const now = Date.now();
     tracker.items = (rawItems || []).map((raw) => ({
@@ -45,6 +45,9 @@
       status: "active",
       source: source || null,
       createdAt: now,
+      // 2026-09-25追加: 【タスクID:回答MM/DD HH:MM:SS-N】のページ内検索キー。
+      // 旧形式の監査結果(数字のみ)から来た場合はnullのまま(表示順連番にフォールバック)。
+      taskIdMarker: raw.taskIdMarker || null,
     }));
     save();
     notify();
@@ -96,6 +99,7 @@
       status: it.status || "active",
       source: it.source || null,
       createdAt: it.createdAt || now,
+      taskIdMarker: it.taskIdMarker || null,
     }));
     save();
     notify();
