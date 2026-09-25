@@ -635,11 +635,11 @@
   }
 
   // タスクIDボタンをクリックした時、ルーム内で【タスクID:N】と書かれている箇所へ
-  // 順番にスクロールする(2026-09-13追加、ユーザー指示「タスクIDを繰り返しクリック
+  // 順番にジャンプする(2026-09-13追加、ユーザー指示「タスクIDを繰り返しクリック
   // したら、次のタスクIDが記載されている場所にジャンプするようにしろ」)。
-  // taskIdごとに現在何番目の出現箇所まで進んだかをnavCycleで覚えておき、
-  // クリックのたびに次へ進める(最後まで行ったら最初に戻る)。
-  const navCycle = new Map(); // taskId -> 次に表示するインデックス
+  // 2026-09-25改修: 「次の出現箇所」への進行は、こちら側でindexを管理するのではなく
+  // content.js側のwindow.find()の検索カーソルにそのまま任せる(ユーザー指摘
+  // 「Ctrl+Fと同じ仕組みで自動化しろ」への対応。詳細はcontent.js参照)。
   async function navigateToTaskId(taskId) {
     const tabId = await getActiveTabId();
     if (!tabId) {
@@ -647,16 +647,13 @@
       return;
     }
     const marker = `【タスクID:${taskId}】`;
-    const index = navCycle.get(taskId) || 0;
     try {
-      const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-scroll-to-occurrence", text: marker, index });
-      if (!res || !res.ok || !res.total) {
+      const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-scroll-to-occurrence", text: marker });
+      if (!res || !res.ok) {
         setStatus(`「${marker}」がルーム内に見つかりませんでした`, "error");
-        navCycle.delete(taskId);
         return;
       }
-      navCycle.set(taskId, (index + 1) % res.total);
-      setStatus(`タスクID: ${taskId} の出現箇所 ${index + 1}/${res.total} 件目へ移動しました`);
+      setStatus(`タスクID: ${taskId} の箇所へ移動しました(クリックのたびに次の出現箇所へ)`);
     } catch (e) {
       setStatus(`${SITE_LABELS[mode]}のタブをリロードしてください`, "error");
     }

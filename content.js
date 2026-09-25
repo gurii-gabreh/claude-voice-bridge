@@ -25,6 +25,11 @@
   };
 
   let seenMessageCount = 0;
+  // 2026-09-25追加: タスクIDジャンプ用に最後に検索したマーカー文字列を覚えておく。
+  // 同じマーカーへの連続クリックはブラウザの検索カーソル位置をそのまま使って
+  // 「次の出現箇所」へ進めるが、別のタスクIDに切り替わった場合は選択を解除して
+  // 文書の先頭から検索し直す(前のタスクIDの検索位置を引きずらないため)。
+  let lastFindMarker = null;
   // 2026-09-13追加(不具合修正): ボイスモードでの会話ターン(listenOnce由来のcvb-send-text)と、
   // 「🔍 ルームタスク一覧を抽出」ボタンでの監査ターン(audit由来のcvb-send-text)が、
   // 同じseenMessageCount/waitForResponseの仕組みを共有しているため、片方の応答待ち中に
@@ -253,28 +258,6 @@
     return null;
   }
 
-  // 2026-09-13追加: タスクIDボタンの「連続クリックで次の出現箇所へジャンプ」用。
-  // needle(【タスクID:N】等の固定文字列)を含む要素を全件、document順で集める。
-  // 同じ親要素の子テキストノード同士で重複マッチしないよう、直近で採用した
-  // 親要素は連続してカウントしない。
-  function findAllElementsContainingText(root, needle) {
-    if (!needle) return [];
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    let node;
-    const matches = [];
-    let lastEl = null;
-    while ((node = walker.nextNode())) {
-      if (node.textContent && node.textContent.includes(needle)) {
-        const el = node.parentElement;
-        if (el !== lastEl) {
-          matches.push(el);
-          lastEl = el;
-        }
-      }
-    }
-    return matches;
-  }
-
   function setComposerText(el, text) {
     el.focus();
     if (el.tagName === "TEXTAREA") {
@@ -417,19 +400,35 @@
       return true;
     }
     if (msg.type === "cvb-scroll-to-occurrence") {
-      // タスクIDボタン用: msg.text(【タスクID:N】等)の全出現箇所のうち、
-      // msg.indexで指定された番目へスクロールする(2026-09-13追加、ユーザー指示
-      // 「タスクIDを繰り返しクリックしたら、次のタスクIDが記載されている場所に
-      // ジャンプするようにしろ」)。何件見つかったか(total)も返し、サイド
-      // パネル側で「次は何番目か」を管理できるようにする。
-      const matches = findAllElementsContainingText(document.body, msg.text || "");
-      if (matches.length === 0) {
-        sendResponse({ ok: false, reason: "not-found", total: 0 });
+      // タスクIDボタン用: msg.text(【タスクID:回答MM/DD HH:MM:SS-N】等)を探して
+      // ジャンプする。2026-09-25改修(ユーザー指摘「スクロールして画面外に出た
+      // 発言はDOMから間引かれる(仮想化)ため、textContentを手動で辿る方式では
+      // 見つけられない」「ブラウザのCtrl+Fなら手動で探すと見つかる」への対応)。
+      // 独自にDOMを辿る方式(findAllElementsContainingText、廃止)はCtrl+Fと
+      // 違って仮想化で間引かれた領域を再描画させられなかった。window.find()は
+      // ブラウザ自身のページ内検索(Ctrl+F)と同じ検索エンジンを使うため、
+      // Ctrl+Fで見つかる箇所は同様に見つけられ、かつ自動でその箇所へスクロール
+      // までしてくれる。
+      const marker = msg.text || "";
+      if (!marker) {
+        sendResponse({ ok: false, reason: "not-found" });
         return true;
       }
-      const idx = ((msg.index || 0) % matches.length + matches.length) % matches.length;
-      matches[idx].scrollIntoView({ behavior: "smooth", block: "center" });
-      sendResponse({ ok: true, total: matches.length, index: idx });
+      // 別のタスクIDに切り替わった場合は、前回の検索位置(選択範囲)を引きずらず
+      // 文書の先頭から探し直す。同じタスクIDへの連続クリックは、選択位置を
+      // そのまま使うことでwindow.find()が自動的に「次の出現箇所」へ進む。
+      if (marker !== lastFindMarker) {
+        window.getSelection().removeAllRanges();
+        lastFindMarker = marker;
+      }
+      const found = window.find(marker, false, false, true, false, false, false);
+      if (!found) {
+        // 全く見つからなかった場合は次回また先頭から探せるようにリセットする。
+        lastFindMarker = null;
+        sendResponse({ ok: false, reason: "not-found" });
+        return true;
+      }
+      sendResponse({ ok: true });
       return true;
     }
     if (msg.type === "cvb-insert-text") {
