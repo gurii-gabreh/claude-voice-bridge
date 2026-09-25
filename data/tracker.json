@@ -1,10 +1,10 @@
 {
   "items": [
     {
-      "id": 1,
+      "id": 4,
       "kind": "相談",
-      "summary": "週次ログ要約Routineの動作確認方法(次の日曜自然発火を待つか、今すぐfire_triggerで試験実行するか)が未回答 【タスクID:1】",
-      "quote": "次の日本時間日曜0時の自然発火を待ちますか、それとも今",
+      "summary": "ルール14-1(【回答〇〇〇】マーカーを今後使うか、room-task-audit方式への移行に伴い廃止するか)が複数回確認しても未回答 【タスクID:1】",
+      "quote": "①今後【回答NNN】を付け始めるべきか、②room-task-audit方式への移行に伴いこの部分も廃止する",
       "uncertain": false,
       "status": "active",
       "source": {
@@ -12,10 +12,10 @@
         "title": "Claude Code",
         "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
-      "createdAt": 1789824160970
+      "createdAt": 1790314996314
     },
     {
-      "id": 2,
+      "id": 5,
       "kind": "未完了作業",
       "summary": "「🔍 抽出」ボタンの重複防止修正(manualExtractSeenCount)の実機での複数回押下確認がまだ 【タスクID:2】",
       "quote": "実装しただけで実際に2回続けて押した実機確認はまだです",
@@ -26,10 +26,10 @@
         "title": "Claude Code",
         "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
-      "createdAt": 1789824160970
+      "createdAt": 1790314996314
     },
     {
-      "id": 3,
+      "id": 6,
       "kind": "未完了作業",
       "summary": "PC版UI改修(❓アイコン・折りたたみ再構成・タスク一覧のJSON管理方法ウィジェット等)の拡張機能再読み込み後の実機確認がまだ 【タスクID:3】",
       "quote": "両方セットでお願いします",
@@ -40,7 +40,21 @@
         "title": "Claude Code",
         "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
-      "createdAt": 1789824160970
+      "createdAt": 1790314996314
+    },
+    {
+      "id": 7,
+      "kind": "未完了作業",
+      "summary": "週次ログ要約Routineを常駐セッション方式に切り替え後、実際の発火での動作確認がまだ(次回2026-09-26予定) 【タスクID:4】",
+      "quote": "次回の実発火(2026-09-26 15:04 UTC予定)で正常に動くかどうかはまだ未検証です",
+      "uncertain": false,
+      "status": "active",
+      "source": {
+        "mode": "claude",
+        "title": "Claude Code",
+        "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
+      },
+      "createdAt": 1790314996314
     }
   ]
 }
