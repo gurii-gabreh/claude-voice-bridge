@@ -155,11 +155,15 @@
     // その場合match()(gフラグ無し)は最初の1件しか拾えず「4件あるのに1件しか
     // 出ない」不具合が起きていた。改行の有無に依存しないよう、本文全体に対して
     // グローバル検索で全件抽出する方式に変更。
-    const itemRe = /種別:\s*(相談|未完了作業)\s*\|\s*内容:\s*(.+?)\s*\|\s*引用:\s*"(.*?)"\s*\|\s*不確実:\s*(はい|いいえ)/g;
+    // 2026-09-27追加、ユーザー指示: manager-room上では複数アプリの話がランダムに
+    // 出てくるため、各項目がどのリポジトリの話かをroom-task-auditが「リポジトリ」
+    // フィールドとして付与する(room-task-audit SKILL.md参照)。旧形式(このフィールドが
+    // 無い監査結果)との後方互換のため、このグループ自体は任意(?:...)?にしている。
+    const itemRe = /種別:\s*(相談|未完了作業)\s*\|\s*(?:リポジトリ:\s*(.+?)\s*\|\s*)?内容:\s*(.+?)\s*\|\s*引用:\s*"(.*?)"\s*\|\s*不確実:\s*(はい|いいえ)/g;
     const items = [];
     let m;
     while ((m = itemRe.exec(body)) !== null) {
-      const summary = m[2].trim();
+      const summary = m[3].trim();
       // 2026-09-25追加、ユーザー指示: タスクIDの実体を【タスクID:回答MM/DD HH:MM:SS-N】
       // という書式に変更(以前は表示順の連番のみだったが、監査のたびに振り直される
       // ため、ページ内検索用のキーとしては監査結果自身の回答タイムスタンプ+行番号を
@@ -170,9 +174,10 @@
       const taskIdMatch = summary.match(/【タスクID:(.+?)】/);
       items.push({
         kind: m[1],
+        repo: m[2] ? m[2].trim() : null,
         summary,
-        quote: m[3],
-        uncertain: m[4] === "はい",
+        quote: m[4],
+        uncertain: m[5] === "はい",
         taskIdMarker: taskIdMatch ? taskIdMatch[1] : null,
       });
     }
@@ -658,6 +663,8 @@
   // (2026-09-12、ユーザー指示「一覧のところだけjson化し、サイドパネルは見せるだけにしろ」)。
   const trackerSectionEl = document.getElementById("tracker-section");
   const trackerTbodyEl = document.getElementById("tracker-tbody");
+  const trackerRepoFilterEl = document.getElementById("tracker-repo-filter");
+  let trackerRepoFilter = ""; // ""=すべて。2026-09-27追加、ユーザー指示(アプリ単位の絞り込み)
 
   // 表示用の短いラベルのみ組み立てる(URLはtracker-store.js側にsource.urlとして
   // 「ルームID」的に保持するが、表には出さない。2026-09-13、ユーザー指示)。
@@ -731,12 +738,47 @@
     );
   }
 
+  // 2026-09-27追加、ユーザー指示: manager-room上では複数アプリの話がランダムに出るため、
+  // タスク一覧を「どのアプリ(リポジトリ)の話か」で絞り込めるようにする。
+  // room-task-auditが付与するitem.repo(無ければ「不明」扱い)を元に選択肢を組み立てる。
+  function renderTrackerRepoFilterOptions(allItems) {
+    const repos = new Set(allItems.map((item) => item.repo || "不明"));
+    const prevValue = trackerRepoFilterEl.value;
+    trackerRepoFilterEl.innerHTML = `<option value="">すべてのアプリ</option>`;
+    Array.from(repos)
+      .sort((a, b) => a.localeCompare(b, "ja"))
+      .forEach((repo) => {
+        const opt = document.createElement("option");
+        opt.value = repo;
+        opt.textContent = repo;
+        trackerRepoFilterEl.appendChild(opt);
+      });
+    // 選択中だった値がまだ選択肢に残っていれば維持する(再抽出のたびに絞り込みが
+    // 解除されると使いにくいため)。
+    if (repos.has(prevValue) || prevValue === "") {
+      trackerRepoFilterEl.value = prevValue;
+      trackerRepoFilter = prevValue;
+    } else {
+      trackerRepoFilterEl.value = "";
+      trackerRepoFilter = "";
+    }
+  }
+
+  trackerRepoFilterEl.addEventListener("change", () => {
+    trackerRepoFilter = trackerRepoFilterEl.value;
+    renderTracker();
+  });
+
   function renderTracker() {
     const tracker = window.TrackerStore.getData();
     trackerTbodyEl.innerHTML = "";
     // 表示は「対応中(status!=="done")」のみ。完了・解決済みはJSON(chrome.storage.local)
     // には残すが表には出さない(2026-09-12、ユーザー指示)。
-    const activeItems = (tracker.items || []).filter((item) => item.status !== "done");
+    const allActiveItems = (tracker.items || []).filter((item) => item.status !== "done");
+    renderTrackerRepoFilterOptions(allActiveItems);
+    const activeItems = trackerRepoFilter
+      ? allActiveItems.filter((item) => (item.repo || "不明") === trackerRepoFilter)
+      : allActiveItems;
 
     activeItems.forEach((item, index) => {
       const tr = document.createElement("tr");
@@ -766,7 +808,14 @@
       numBtn.onclick = () => navigateToTaskId(jump.text, jump.label);
       numCell.appendChild(numBtn);
 
-      tr.querySelector(".tracker-text").textContent = item.summary || "(内容不明)";
+      // 2026-09-27追加、ユーザー指示: どのアプリの話かを小さなバッジで内容欄の先頭に表示する
+      // (狭いサイドパネル幅では列を増やさず、バッジで表現する方が実用的なため)。
+      const textCell = tr.querySelector(".tracker-text");
+      const repoBadge = document.createElement("span");
+      repoBadge.className = "tracker-repo-badge";
+      repoBadge.textContent = item.repo || "不明";
+      textCell.appendChild(repoBadge);
+      textCell.appendChild(document.createTextNode(item.summary || "(内容不明)"));
       tr.querySelector(".tracker-room").textContent = roomLabel(item.source);
 
       const actionsCell = tr.lastElementChild;

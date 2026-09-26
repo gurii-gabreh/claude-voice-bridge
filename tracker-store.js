@@ -33,12 +33,16 @@
   }
 
   // rawItems: room-task-audit スキルの出力をパースした配列
-  // [{ kind, summary, quote, uncertain, taskIdMarker }, ...]。source: {mode, title, url}(任意)。
+  // [{ kind, repo, summary, quote, uncertain, taskIdMarker }, ...]。source: {mode, title, url}(任意)。
   function setItems(rawItems, source) {
     const now = Date.now();
     tracker.items = (rawItems || []).map((raw) => ({
       id: nextId++,
       kind: raw.kind,
+      // 2026-09-27追加、ユーザー指示: manager-room上では複数アプリの話が出るため、
+      // どのリポジトリ(アプリ)の話かをroom-task-auditが判断して付与する。
+      // 旧形式の監査結果(このフィールドが無い)はnullのまま(「不明」表示にフォールバック)。
+      repo: raw.repo || null,
       summary: raw.summary,
       quote: raw.quote || "",
       uncertain: !!raw.uncertain,
@@ -93,6 +97,7 @@
     tracker.items = (items || []).map((it, idx) => ({
       id: it.id || `${now}_${idx}`,
       kind: it.kind,
+      repo: it.repo || null,
       summary: it.summary,
       quote: it.quote || "",
       uncertain: !!it.uncertain,

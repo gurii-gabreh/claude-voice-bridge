@@ -263,6 +263,30 @@
   }
   .tracker-copy:hover { border-color: var(--accent); color: var(--accent); }
   .tracker-room { white-space: nowrap; color: var(--ink-soft); font-size: 10px; max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
+  #tracker-repo-filter {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 11px;
+    font-family: inherit;
+    padding: 4px 6px;
+    margin-bottom: 6px;
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--ink);
+  }
+  .tracker-repo-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--ink-soft);
+    margin-right: 4px;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
   .tracker-badge {
     display: inline-block;
     font-size: 10px;
@@ -548,6 +572,9 @@
     <div id="tracker-section">
       <div id="tracker-section-label">AI開発情報一覧</div>
       <div class="section-title">📋 未解決の相談・進行中のタスク(見逃し防止)</div>
+      <select id="tracker-repo-filter" title="アプリ(リポジトリ)で絞り込み">
+        <option value="">すべてのアプリ</option>
+      </select>
       <table id="tracker-table">
         <thead>
           <tr><th>タスクID</th><th>内容</th><th>ルーム</th><th>ステータス</th><th></th></tr>

@@ -160,6 +160,28 @@
   .task-summary { font-size: 13px; white-space: pre-wrap; word-break: break-word; }
   .task-room { color: var(--ink-soft); font-size: 11px; margin-top: 4px; }
   #tracker-empty { color: var(--ink-soft); font-size: 12.5px; }
+  #tracker-repo-filter {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 13px;
+    font-family: inherit;
+    padding: 6px 8px;
+    margin-bottom: 8px;
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--ink);
+  }
+  .task-repo-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
 
   .phrase-list { display: flex; flex-direction: column; gap: 6px; }
   .phrase-btn {
@@ -229,6 +251,9 @@
 
   <section>
     <div class="section-title">📋 AI開発情報一覧</div>
+    <select id="tracker-repo-filter" title="アプリ(リポジトリ)で絞り込み">
+      <option value="">すべてのアプリ</option>
+    </select>
     <div id="tracker-list"></div>
     <div id="tracker-empty" style="display:none;">未解決のタスクはありません。</div>
   </section>
@@ -293,6 +318,8 @@
 
   const trackerListEl = document.getElementById("tracker-list");
   const trackerEmptyEl = document.getElementById("tracker-empty");
+  const trackerRepoFilterEl = document.getElementById("tracker-repo-filter");
+  let trackerRepoFilter = ""; // ""=すべて。2026-09-27追加、ユーザー指示(アプリ単位の絞り込み)
   const phraseListEl = document.getElementById("phrase-list");
   const skillPhraseListEl = document.getElementById("skill-phrase-list");
   const refreshBtn = document.getElementById("refresh-btn");
@@ -305,14 +332,49 @@
 
   let currentTrackerItems = [];
 
+  // 2026-09-27追加、ユーザー指示: manager-room上では複数アプリの話がランダムに出るため、
+  // タスク一覧を「どのアプリ(リポジトリ)の話か」で絞り込めるようにする(PC版sidepanel.jsと同じ仕様)。
+  function renderTrackerRepoFilterOptions(allItems) {
+    const repos = new Set(allItems.map((item) => item.repo || "不明"));
+    const prevValue = trackerRepoFilterEl.value;
+    trackerRepoFilterEl.innerHTML = `<option value="">すべてのアプリ</option>`;
+    Array.from(repos)
+      .sort((a, b) => a.localeCompare(b, "ja"))
+      .forEach((repo) => {
+        const opt = document.createElement("option");
+        opt.value = repo;
+        opt.textContent = repo;
+        trackerRepoFilterEl.appendChild(opt);
+      });
+    if (repos.has(prevValue) || prevValue === "") {
+      trackerRepoFilterEl.value = prevValue;
+      trackerRepoFilter = prevValue;
+    } else {
+      trackerRepoFilterEl.value = "";
+      trackerRepoFilter = "";
+    }
+  }
+
+  trackerRepoFilterEl.addEventListener("change", () => {
+    trackerRepoFilter = trackerRepoFilterEl.value;
+    renderTracker(currentTrackerItems);
+  });
+
   function renderTracker(items) {
     currentTrackerItems = items || [];
     trackerListEl.innerHTML = "";
-    const activeItems = (items || []).filter((i) => (i.status || "active") !== "done");
+    const allActiveItems = (items || []).filter((i) => (i.status || "active") !== "done");
+    renderTrackerRepoFilterOptions(allActiveItems);
+    const activeItems = trackerRepoFilter
+      ? allActiveItems.filter((i) => (i.repo || "不明") === trackerRepoFilter)
+      : allActiveItems;
     trackerEmptyEl.style.display = activeItems.length ? "none" : "block";
     activeItems.forEach((item) => {
       const card = document.createElement("div");
       card.className = "task-card";
+      const repoBadge = document.createElement("div");
+      repoBadge.className = "task-repo-badge";
+      repoBadge.textContent = item.repo || "不明";
       const head = document.createElement("div");
       head.className = "task-card-head";
       const idSpan = document.createElement("span");
@@ -329,6 +391,7 @@
       room.className = "task-room";
       const src = item.source || {};
       room.textContent = [src.title, src.mode].filter(Boolean).join(" / ") || "";
+      card.appendChild(repoBadge);
       card.appendChild(head);
       card.appendChild(summary);
       if (room.textContent) card.appendChild(room);
@@ -422,11 +485,20 @@
     if (!block) return null;
     const body = block[1].trim();
     if (!body || body.includes("未解決の項目はありません")) return [];
-    const itemRe = /種別:\s*(相談|未完了作業)\s*\|\s*内容:\s*(.+?)\s*\|\s*引用:\s*"(.*?)"\s*\|\s*不確実:\s*(はい|いいえ)/g;
+    // 2026-09-27追加、ユーザー指示: manager-room上では複数アプリの話がランダムに出るため、
+    // room-task-auditが「リポジトリ」フィールドを付与する(sidepanel.jsと同じ仕様)。
+    // 旧形式(このフィールドが無い監査結果)との後方互換のため任意(?:...)?にしている。
+    const itemRe = /種別:\s*(相談|未完了作業)\s*\|\s*(?:リポジトリ:\s*(.+?)\s*\|\s*)?内容:\s*(.+?)\s*\|\s*引用:\s*"(.*?)"\s*\|\s*不確実:\s*(はい|いいえ)/g;
     const items = [];
     let m;
     while ((m = itemRe.exec(body)) !== null) {
-      items.push({ kind: m[1], summary: m[2].trim(), quote: m[3], uncertain: m[4] === "はい" });
+      items.push({
+        kind: m[1],
+        repo: m[2] ? m[2].trim() : null,
+        summary: m[3].trim(),
+        quote: m[4],
+        uncertain: m[5] === "はい",
+      });
     }
     return items;
   }
@@ -442,6 +514,7 @@
     const items = parsed.map((raw2, idx) => ({
       id: `${now}_${idx}`,
       kind: raw2.kind,
+      repo: raw2.repo || null,
       summary: raw2.summary,
       quote: raw2.quote || "",
       uncertain: !!raw2.uncertain,
