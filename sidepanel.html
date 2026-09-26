@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>Claude Voice Bridge</title>
+<title>AI開発情報一覧</title>
 <style>
   :root {
     --bg: #05080c;
@@ -175,12 +175,25 @@
   #state-tag.keyword { color: var(--keyword); }
   #state-tag.error { color: var(--error); }
 
+  #status-wrap {
+    width: 100%;
+    max-width: 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  #status-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+  }
   #status {
     font-size: 12.5px;
     color: var(--ink-soft);
-    text-align: center;
+    text-align: left;
     min-height: 18px;
-    max-width: 280px;
   }
 
   #mic-permission-btn {
@@ -471,7 +484,7 @@
 </head>
 <body>
 
-  <div id="hud-title">V.B. TACTICAL LINK</div>
+  <div id="hud-title">AI開発情報一覧</div>
 
   <div id="panel-tabs">
     <button class="panel-tab active" id="panel-tab-voice" type="button">🎙️ ボイス</button>
@@ -483,8 +496,12 @@
        一覧モードのボタン(GitHub同期・JSONから読み込む等)を押した結果のステータス
        文言が実際には更新されていても画面上は不可視だった(ユーザー報告「ボタンを
        押しても反応が無い」)。ボイス/一覧どちらのタブでも見えるよう、両パネルの
-       外(共通領域)へ移動した。 -->
-  <div id="status">停止中(オーブをクリックして開始)</div>
+       外(共通領域)へ移動した。2026-09-26、ユーザー指示で「処理ログ欄」として
+       ラベル付けし、中央寄せから左寄せへ変更した。 -->
+  <div id="status-wrap">
+    <div id="status-label">処理ログ</div>
+    <div id="status">停止中(オーブをクリックして開始)</div>
+  </div>
 
   <div id="voice-mode-panel">
     <p class="sub">オーブをクリックで起動。「Claude」または「Gemini」と呼びかけると、そのAIに切り替わって会話が始まります。</p>
@@ -517,14 +534,19 @@
   </div>
 
   <div id="list-mode-panel" style="display:none;">
-    <p class="sub">「🔍 抽出」を押すと、AIがこのルームを直接読み返し、未解決の相談・未完了の作業を一覧化します(通常の会話ターンが1往復増えます)。</p>
+    <details class="collapsible-block">
+      <summary class="collapsible-summary">❓ 使用方法</summary>
+      <div class="collapsible-body">
+        <p>「🔍 抽出」を押すと、AIがこのルームを直接読み返し、未解決の相談・未完了の作業を一覧化します(通常の会話ターンが1往復増えます)。</p>
+      </div>
+    </details>
     <div id="action-row">
       <button id="extract-room-btn" type="button">🔍 ルームタスク一覧を抽出</button>
       <button id="sync-github-btn" type="button">☁️ タスク一覧→JSONへ同期</button>
       <button id="load-tracker-json-btn" type="button" title="タスク一覧と定例文の両方を、GitHub上の最新内容に更新します">📥 JSONから一覧を読み込む</button>
     </div>
     <div id="tracker-section">
-      <div id="tracker-section-label">タスク一覧</div>
+      <div id="tracker-section-label">AI開発情報一覧</div>
       <div class="section-title">📋 未解決の相談・進行中のタスク(見逃し防止)</div>
       <table id="tracker-table">
         <thead>
