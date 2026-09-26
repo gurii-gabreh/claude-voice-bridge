@@ -669,26 +669,55 @@
     return [siteLabel, shortTitle].filter(Boolean).join(": ") || "-";
   }
 
-  // タスクIDボタンをクリックした時、ルーム内で【タスクID:N】と書かれている箇所へ
-  // 順番にジャンプする(2026-09-13追加、ユーザー指示「タスクIDを繰り返しクリック
-  // したら、次のタスクIDが記載されている場所にジャンプするようにしろ」)。
+  // タスクIDボタンをクリックした時、ルーム内の該当箇所へジャンプする
+  // (2026-09-13追加、ユーザー指示「タスクIDを繰り返しクリックしたら、次のタスクIDが
+  // 記載されている場所にジャンプするようにしろ」)。
   // 2026-09-25改修: 「次の出現箇所」への進行は、こちら側でindexを管理するのではなく
   // content.js側のwindow.find()の検索カーソルにそのまま任せる(ユーザー指摘
   // 「Ctrl+Fと同じ仕組みで自動化しろ」への対応。詳細はcontent.js参照)。
-  async function navigateToTaskId(taskId) {
+  // 2026-09-26変更(ユーザー指摘「クリックすると大本の回答部分にスキップする仕様に
+  // したい。抽出結果部分に遷移ではない」): 従来は検索テキストに
+  // 【タスクID:回答MM/DD HH:MM:SS-N】という複合文字列そのものを使っていたが、この
+  // 文字列は監査(抽出)自身の出力にしか書かれておらず、タスクIDの起点である
+  // 「元のClaudeの回答」自体には(「タスクID:」も「-N」も付かない)一度も存在しない
+  // ため、結局いつも抽出結果の要約行にしかジャンプできなかった。buildJumpSearchText()
+  // で、起点がAIの回答なら起点自身に実在する素の`【回答MM/DD HH:MM:SS】`マーカーを、
+  // 起点がユーザー発言(マーカー無し)なら`引用`(会話中の一意なフレーズ、
+  // room-task-audit SKILL.md参照)を検索テキストとして使うよう変更した。
+  function buildJumpSearchText(item, displayTaskId) {
+    const marker = item.taskIdMarker; // 例: "回答09/26 01:01:01-1" / "発言09/26 01:01:01-1"
+    if (marker) {
+      const m = marker.match(/^(回答|発言)(.+?)-\d+$/);
+      if (m && m[1] === "回答") {
+        // AI自身の回答マーカーは、起点となった回答そのものの先頭に文字通り
+        // 書かれている(CLAUDE.mdルール14-1)ため、これ自体を検索キーにすれば
+        // 抽出結果ではなく元の回答へジャンプできる。
+        return { text: `【回答${m[2]}】`, label: `タスクID: ${displayTaskId}(元の回答)` };
+      }
+    }
+    if (item.quote) {
+      // 起点がユーザー発言、または旧形式でtaskIdMarkerが解析できない場合は、
+      // 会話中の一意な引用文(quote)で検索する(マーカーの無い発言そのものには
+      // ブラケット付き識別子が存在しないため)。
+      return { text: item.quote, label: `タスクID: ${displayTaskId}(引用箇所)` };
+    }
+    // どちらも無い最終フォールバック(旧形式の監査結果由来)。
+    return { text: `【タスクID:${marker || displayTaskId}】`, label: `タスクID: ${displayTaskId}` };
+  }
+
+  async function navigateToTaskId(searchText, statusLabel) {
     const tabId = await getActiveTabId();
     if (!tabId) {
       setStatus(`${SITE_LABELS[mode]}のタブを開いて、アクティブにしてください`, "error");
       return;
     }
-    const marker = `【タスクID:${taskId}】`;
     try {
-      const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-scroll-to-occurrence", text: marker });
+      const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-scroll-to-occurrence", text: searchText });
       if (!res || !res.ok) {
-        setStatus(`「${marker}」がルーム内に見つかりませんでした`, "error");
+        setStatus(`「${searchText}」がルーム内に見つかりませんでした`, "error");
         return;
       }
-      setStatus(`タスクID: ${taskId} の箇所へ移動しました(クリックのたびに次の出現箇所へ)`);
+      setStatus(`${statusLabel}の箇所へ移動しました(クリックのたびに次の出現箇所へ)`);
     } catch (e) {
       setStatus(`${SITE_LABELS[mode]}のタブをリロードしてください`, "error");
     }
@@ -726,15 +755,15 @@
       // 2026-09-13追加(ユーザー指示「種別はタスクIDに変えろ」): 種別ラベルではなく
       // タスクID(表示順の通し番号、1始まり)を表示する。
       // 2026-09-25変更: 表示ラベルは引き続き分かりやすい表示順連番のままにするが、
-      // ページ内検索(クリックジャンプ)には表示位置ではなく、item.taskIdMarker
-      // (【タスクID:回答MM/DD HH:MM:SS-N】から抜き出した実際の値、parseAuditResponse
-      // 参照)を使う。旧形式の監査結果由来でtaskIdMarkerが無い場合のみ、従来通り
-      // 表示順連番を検索キーとして使う(後方互換)。
+      // ページ内検索(クリックジャンプ)にはbuildJumpSearchText()(上部参照)が
+      // item.taskIdMarker/item.quoteから組み立てた検索テキストを使う。
+      // 2026-09-26変更: クリックした際に抽出結果の要約行ではなく、起点となった
+      // 元のClaudeの回答(またはユーザー発言の引用箇所)へジャンプするように変更。
       const displayTaskId = index + 1;
-      const searchKey = item.taskIdMarker || String(displayTaskId);
+      const jump = buildJumpSearchText(item, displayTaskId);
       numBtn.textContent = `タスクID: ${displayTaskId}`;
-      numBtn.title = "クリックでルーム内の該当箇所へ移動(連続クリックで次の出現箇所へ)";
-      numBtn.onclick = () => navigateToTaskId(searchKey);
+      numBtn.title = "クリックでルーム内の該当箇所(元の回答)へ移動(連続クリックで次の出現箇所へ)";
+      numBtn.onclick = () => navigateToTaskId(jump.text, jump.label);
       numCell.appendChild(numBtn);
 
       tr.querySelector(".tracker-text").textContent = item.summary || "(内容不明)";
