@@ -179,7 +179,11 @@
     return items;
   }
 
-  function handleAuditResponse(text, source) {
+  // 2026-09-26変更: 抽出が終わったら、そのままGitHubへの同期(☁️)→GitHubからの
+  // 読み込み(📥)まで数珠つなぎに続けて実行する(ユーザー指示「3つボタンを押すから、
+  // 1つ終わったら次を呼び出すように」)。同期に失敗した場合は読み込みへは進まない
+  // (古い/矛盾したJSONをそのまま読み込んでしまうため)。
+  async function handleAuditResponse(text, source) {
     const items = parseAuditResponse(text);
     if (items === null) {
       setStatus("監査結果の解析に失敗しました(想定した形式で応答されませんでした)", "error");
@@ -187,9 +191,13 @@
     }
     window.TrackerStore.setItems(items, source);
     if (items.length > 0) {
-      setStatus(`${SITE_LABELS[mode]}: 未解決の項目を${items.length}件検出しました`);
+      setStatus(`${SITE_LABELS[mode]}: 未解決の項目を${items.length}件検出しました。GitHubへ同期しています…`);
     } else {
-      setStatus(`${SITE_LABELS[mode]}: 未解決の項目はありませんでした`);
+      setStatus(`${SITE_LABELS[mode]}: 未解決の項目はありませんでした。GitHubへ同期しています…`);
+    }
+    const synced = await syncTrackerToGithub();
+    if (synced) {
+      await loadTrackerJsonAndTemplates();
     }
   }
 
@@ -239,14 +247,18 @@
     }
   });
 
-  // ---- トラッカーのGitHub同期(手動トリガーのみ) ----
+  // ---- トラッカーのGitHub同期 ----
   // その時点のトラッカー全体をdata/tracker.json(claude-voice-bridgeリポジトリ)へ
   // 上書き保存する。自動同期はしない(常時監視で頻繁に更新されるたびcommitすると
-  // 履歴が大量になるため、ボタンを押した時だけ)。2026-09-13追加、ユーザー指示。
-  syncGithubBtn.addEventListener("click", async () => {
+  // 履歴が大量になるため)。2026-09-13追加、ユーザー指示。
+  // 2026-09-26変更: 「☁️ タスク一覧→JSONへ同期」ボタン単体は非表示にし、
+  // 「🔍 ルームタスク一覧を抽出」(抽出→同期→読み込みへ改称)の一連の処理から
+  // 呼び出す関数として切り出した(ユーザー指示「3つボタンを押すから数珠つなぎに」)。
+  // 戻り値はチェーンの続行判定用(true=成功)。
+  async function syncTrackerToGithub() {
     if (!CVB_GAS_URL) {
       setStatus("GitHub同期は未設定です(gas/README.mdの手順でデプロイしてください)", "error");
-      return;
+      return false;
     }
     setStatus("GitHubへ同期中…");
     try {
@@ -257,31 +269,35 @@
       const json = await res.json();
       if (json.status === "ok") {
         setStatus("GitHubへ同期しました");
-      } else {
-        setStatus(`GitHub同期エラー: ${json.message || "不明なエラー"}`, "error");
+        return true;
       }
+      setStatus(`GitHub同期エラー: ${json.message || "不明なエラー"}`, "error");
+      return false;
     } catch (e) {
       setStatus("GitHub同期エラー(通信失敗)", "error");
+      return false;
     }
-  });
+  }
+  syncGithubBtn.addEventListener("click", syncTrackerToGithub);
 
-  // 「📥 JSONから一覧を読み込む」ボタン: 2026-09-13追加、ユーザー指示。
+  // 「📥 JSONから一覧を読み込む」処理: 2026-09-13追加、ユーザー指示。
   // 経緯: ブラウザ側の自動抽出(ページのDOM構造を推測して応答を捕まえる仕組み)は
   // claude.ai/code側の表示変更に弱く、繰り返し誤抽出が発生していた。一方でAI
   // (Claude)がこのルームを直接確認してdata/tracker.json(claude-voice-bridge
   // リポジトリ)へ書き込む経路は確実に機能していたため、ブラウザの自動抽出とは
   // 独立に、GitHub上のdata/tracker.jsonを直接fetchして一覧に反映するだけの
-  // ボタンを追加した(読み取り専用・認証不要、publicリポジトリのraw contentを
-  // 取得するだけ)。
+  // 処理を追加した(読み取り専用・認証不要、publicリポジトリのraw contentを
+  // 取得するだけ)。2026-09-26変更: ボタン単体は非表示にし、syncTrackerToGithubと
+  // 同様にチェーンから呼べる関数として切り出した。
   const TRACKER_JSON_RAW_URL =
     "https://raw.githubusercontent.com/gurii-gabreh/claude-voice-bridge/main/data/tracker.json";
   // 2026-09-18追加、ユーザー指示「JSONから一覧を取得を押すと定例文も更新できるように。
   // 新規のスキルが追加された時に定例文に追加してほしい」。定例文の正本
-  // (data/templates.json)も同じボタンで一緒に取得・反映する(ボタンを分けず1回の
-  // 操作で両方最新化できるようにするため)。
+  // (data/templates.json)も同じ処理で一緒に取得・反映する(操作を分けず1回で
+  // 両方最新化できるようにするため)。
   const TEMPLATES_JSON_RAW_URL =
     "https://raw.githubusercontent.com/gurii-gabreh/claude-voice-bridge/main/data/templates.json";
-  loadTrackerJsonBtn.addEventListener("click", async () => {
+  async function loadTrackerJsonAndTemplates() {
     setStatus("GitHub上のJSONを読み込み中…");
     let trackerCount = null;
     let templatesUpdated = false;
@@ -289,15 +305,32 @@
       const res = await fetch(`${TRACKER_JSON_RAW_URL}?t=${Date.now()}`, { cache: "no-store" });
       if (!res.ok) {
         setStatus(`トラッカーJSONの取得に失敗しました(HTTP ${res.status})`, "error");
-        return;
+        return false;
       }
-      const json = await res.json();
-      window.TrackerStore.loadFromGithubItems(json.items || []);
-      trackerCount = (json.items || []).filter((i) => (i.status || "active") !== "done").length;
+      let json = await res.json();
+      let items = json.items || [];
+      // 2026-09-26追加: README既知の制約(「☁️ 同期」直後に「📥 読み込み」を行うと、
+      // raw.githubusercontent.com側への反映の遅れでごく稀に空として読み込まれる)への
+      // 対策。抽出→同期→読み込みを自動で数珠つなぎにしたことで、この「同期直後の
+      // 読み込み」が毎回発生するようになったため、空だった場合のみ2秒待って
+      // 1回だけ再取得する(手動で「📥」を単独で押した場合も同じ経路を通るため安全)。
+      if (items.length === 0) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const retryRes = await fetch(`${TRACKER_JSON_RAW_URL}?t=${Date.now()}`, { cache: "no-store" });
+        if (retryRes.ok) {
+          const retryJson = await retryRes.json();
+          if ((retryJson.items || []).length > 0) {
+            json = retryJson;
+            items = retryJson.items;
+          }
+        }
+      }
+      window.TrackerStore.loadFromGithubItems(items);
+      trackerCount = items.filter((i) => (i.status || "active") !== "done").length;
     } catch (e) {
       console.log("[cvb-panel] トラッカーJSONの読み込みに失敗:", e);
       setStatus("トラッカーJSONの読み込みに失敗しました(通信エラー)", "error");
-      return;
+      return false;
     }
     try {
       const tRes = await fetch(`${TEMPLATES_JSON_RAW_URL}?t=${Date.now()}`, { cache: "no-store" });
@@ -319,7 +352,9 @@
     setStatus(
       `GitHub上のJSONから読み込みました(未完了${trackerCount}件${templatesUpdated ? "、定例文も更新" : ""})`
     );
-  });
+    return true;
+  }
+  loadTrackerJsonBtn.addEventListener("click", loadTrackerJsonAndTemplates);
 
   // テンプレートは { label, text } の配列。textは複数行の長文も可。
   // エディタ上では "---" だけの行で区切り、各ブロックの1行目をlabel、

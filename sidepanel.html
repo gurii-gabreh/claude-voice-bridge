@@ -541,9 +541,9 @@
       </div>
     </details>
     <div id="action-row">
-      <button id="extract-room-btn" type="button">🔍 ルームタスク一覧を抽出</button>
-      <button id="sync-github-btn" type="button">☁️ タスク一覧→JSONへ同期</button>
-      <button id="load-tracker-json-btn" type="button" title="タスク一覧と定例文の両方を、GitHub上の最新内容に更新します">📥 JSONから一覧を読み込む</button>
+      <button id="extract-room-btn" type="button" title="ルームの抽出→GitHubへ同期→GitHubから読み込み、を続けて実行します">🔄 タスク一覧を更新</button>
+      <button id="sync-github-btn" type="button" hidden>☁️ タスク一覧→JSONへ同期</button>
+      <button id="load-tracker-json-btn" type="button" hidden title="タスク一覧と定例文の両方を、GitHub上の最新内容に更新します">📥 JSONから一覧を読み込む</button>
     </div>
     <div id="tracker-section">
       <div id="tracker-section-label">AI開発情報一覧</div>
@@ -559,7 +559,7 @@
       <summary class="collapsible-summary">📦 タスク一覧のJSON管理方法</summary>
       <div class="collapsible-body">
         <p>タスク一覧(未解決の相談・作業)は、PC版(この拡張機能)とモバイル版(Web版)の両方から更新でき、どちらも同じGitHub上の<code>data/tracker.json</code>を共有しています。</p>
-        <p><strong>PC版</strong>: 「🔍 抽出」を押すとroom-task-auditスキルがルームを最初から読み返し、その時点の未解決タスクだけで一覧を丸ごと置き換えます(ローカル表示のみ)。「☁️ タスク一覧→JSONへ同期」でGitHubへ書き込みます。</p>
+        <p><strong>PC版</strong>: 「🔄 タスク一覧を更新」を押すと、room-task-auditスキルによるルーム抽出→GitHubへの同期(☁️)→GitHubからの再読み込み(📥)を1つのボタンで続けて実行します(2026-09-26変更、以前は3ボタンに分かれていた処理を数珠つなぎ化)。</p>
         <p><strong>モバイル版</strong>: claude.aiで直接room-task-auditを呼び出し、その回答をモバイル版ページに貼り付けると、PC版と同じ「その時点の未解決タスク全部」で置き換わります。同期ボタンも同じ仕組みです。</p>
         <p><strong>重複・競合</strong>: どちらも「丸ごと置き換え」方式のため重複登録はされません。ただしPC・モバイルが別々の内容を持ったまま両方同期すると、後から同期した方が前の内容を完全に上書きします(マージはしない仕様、2026-09-19確認済み)。</p>
         <p><strong>生ログとの違い</strong>: 上記のtracker.jsonとは別に、会話の生ログは<code>room-log.json</code>/<code>knowledge-log.json</code>へ「前回から増えた分だけ」を差分方式で蓄積し、週次Routineがそのうち前回処理した時点より新しい分だけをAIが判断して<code>weekly-digest.json</code>(傾向分析用の永続ナレッジ)へ要約を追記します。</p>
