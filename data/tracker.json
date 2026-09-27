@@ -1,64 +1,68 @@
 {
   "items": [
     {
-      "id": 10,
-      "kind": "未完了作業",
-      "summary": "タスクIDジャンプのwindow.find()方式への修正が、拡張機能再読み込み後に実機で正常動作するか未確認 【タスクID:回答09/25 17:48:05-2】",
-      "quote": "拡張機能の再読み込み→claude.aiタブの開き直し→タスクIDボタンでのジャンプ確認",
-      "uncertain": false,
-      "status": "active",
+      "createdAt": 1790475162280,
+      "id": 1,
+      "kind": "相談",
+      "quote": "要件定義シート遡及作成」はスクリプト準備済みでまだ未実行のままです",
+      "repo": "progress-tracker-dashboard",
       "source": {
         "mode": "claude",
         "title": "Claude Code",
         "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
-      "createdAt": 1790325243093,
-      "taskIdMarker": "回答09/25 17:48:05-2"
+      "status": "active",
+      "summary": "既存12リポジトリの要件定義シート遡及作成を続行してよいか確認待ち【タスクID:回答09/27 10:19:33-1】",
+      "taskIdMarker": "回答09/27 10:19:33-1",
+      "uncertain": false
     },
     {
-      "id": 11,
+      "createdAt": 1790475162280,
+      "id": 2,
       "kind": "未完了作業",
-      "summary": "「🔍 抽出」ボタンの重複防止修正(manualExtractSeenCount)の実機での複数回押下確認が未実施 【タスクID:回答09/25 17:48:05-3】",
-      "quote": "実装しただけで実際に2回続けて押した実機確認はまだです",
-      "uncertain": false,
-      "status": "active",
+      "quote": "今も「🎙️ ボイス」「📋 一覧」の2タブのままで、まだ追加していません",
+      "repo": "claude-voice-bridge",
       "source": {
         "mode": "claude",
         "title": "Claude Code",
         "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
-      "createdAt": 1790325243093,
-      "taskIdMarker": "回答09/25 17:48:05-3"
+      "status": "active",
+      "summary": "「📐 基本設計」タブ(3つ目のタブ、確認済み仕様)本体が未実装【タスクID:回答09/26 17:18:23-1】",
+      "taskIdMarker": "回答09/26 17:18:23-1",
+      "uncertain": false
     },
     {
-      "id": 12,
+      "createdAt": 1790475162280,
+      "id": 3,
       "kind": "未完了作業",
-      "summary": "PC版UI改修(❓アイコン・折りたたみ再構成・JSON管理方法ウィジェット等)の拡張機能再読み込み後の実機確認が未実施 【タスクID:回答09/25 17:48:05-4】",
-      "quote": "両方セットでお願いします",
-      "uncertain": false,
-      "status": "active",
+      "quote": "Artifactのモックアップのみで、実際のdashboard.htmlにはまだ反映していません",
+      "repo": "Knowledge-Dashboard",
       "source": {
         "mode": "claude",
         "title": "Claude Code",
         "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
-      "createdAt": 1790325243093,
-      "taskIdMarker": "回答09/25 17:48:05-4"
+      "status": "active",
+      "summary": "「アプリ基本設計」4番目のタブ本体が未実装(モックアップのみ)【タスクID:回答09/26 17:18:23-2】",
+      "taskIdMarker": "回答09/26 17:18:23-2",
+      "uncertain": false
     },
     {
-      "id": 13,
-      "kind": "未完了作業",
-      "summary": "週次ログ要約Routineの常駐セッション方式切り替え後、実際の発火(次回2026-09-26予定)での動作確認が未実施 【タスクID:回答09/25 17:48:05-5】",
-      "quote": "次回の実発火(2026-09-26 15:04 UTC予定)で正常に動くかどうかはまだ未検証です",
-      "uncertain": false,
-      "status": "active",
+      "createdAt": 1790475162280,
+      "id": 4,
+      "kind": "相談",
+      "quote": "画面のイメージフォーム的なものを設定し、その中でウィジェットを自由に変えて更新する",
+      "repo": "claude-voice-bridge",
       "source": {
         "mode": "claude",
         "title": "Claude Code",
         "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
-      "createdAt": 1790325243093,
-      "taskIdMarker": "回答09/25 17:48:05-5"
+      "status": "active",
+      "summary": "設定タブでウィジェット表示を選べる機能の実装可否・時期が未確定【タスクID:回答09/27 10:38:22-1】",
+      "taskIdMarker": "回答09/27 10:38:22-1",
+      "uncertain": false
     }
   ]
 }
