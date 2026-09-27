@@ -75,6 +75,22 @@
     notify();
   }
 
+  // 2026-09-27追加、ユーザー指示: タスク一覧を単体ページ(widget-tasks.html)に切り出し、
+  // サイドパネルからiframeで呼び出す構成にした。TrackerStoreは拡張機能のページごとに
+  // 別々のJS実行コンテキストとして読み込まれる(=別々のインスタンスを持つ)ため、
+  // 素の状態のままだと片方(例: サイドパネル側で抽出)の更新がもう片方(iframe側)に
+  // 伝わらない。chrome.storage.onChangedは拡張機能内のどのページで書き込んでも
+  // 全てのページへ通知される仕組みなので、これを使って他コンテキストの変更を
+  // 自分のtracker(メモリ上のコピー)へ反映し、自分のlistenersにも通知する。
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== "local" || !changes.cvb_tracker) return;
+    const newValue = changes.cvb_tracker.newValue;
+    if (!newValue) return;
+    tracker.items = newValue.items || [];
+    nextId = newValue.nextId || tracker.items.length + 1;
+    notify();
+  });
+
   function onChange(fn) {
     listeners.push(fn);
   }

@@ -18,8 +18,6 @@
   const selInput = document.getElementById("sel-input");
   const selSend = document.getElementById("sel-send");
   const selMessage = document.getElementById("sel-message");
-  const phraseButtonsEl = document.getElementById("phrase-buttons");
-  const skillPhraseButtonsEl = document.getElementById("skill-phrase-buttons");
   const phraseEditorEl = document.getElementById("phrase-editor");
   const phraseSaveBtn = document.getElementById("phrase-save");
   const micPermissionBtn = document.getElementById("mic-permission-btn");
@@ -342,8 +340,10 @@
       if (tRes.ok) {
         const tJson = await tRes.json();
         if (Array.isArray(tJson.templates) && tJson.templates.length) {
+          // 2026-09-27変更: ボタン一覧の再描画はwidget-phrases.html/widget-skill-phrases.html
+          // 側がchrome.storage.onChangedを監視して自分で行うため、ここではstorageへの
+          // 保存とeditorの更新だけでよい。
           await chrome.storage.local.set({ cvb_templates: tJson.templates });
-          renderTemplateButtons(tJson.templates);
           phraseEditorEl.value = templatesToText(tJson.templates);
           templatesUpdated = true;
         }
@@ -656,192 +656,27 @@
     }
   }
 
-  // ---- 相談・処理タスクの見逃し防止トラッカー(表示のみ) ----
+  // ---- 相談・処理タスクの見逃し防止トラッカー ----
   // CLAUDE.mdルール14の【相談NNN】【処理開始NNN】【処理完了NNN】マーカーの検出・
   // 状態管理(データ)はtracker-store.js(TrackerStore)側に分離した。
-  // ここ(sidepanel.js)はTrackerStore.getData()が返すJSONを描画するだけにする
-  // (2026-09-12、ユーザー指示「一覧のところだけjson化し、サイドパネルは見せるだけにしろ」)。
-  const trackerSectionEl = document.getElementById("tracker-section");
-  const trackerTbodyEl = document.getElementById("tracker-tbody");
-  const trackerRepoFilterEl = document.getElementById("tracker-repo-filter");
-  let trackerRepoFilter = ""; // ""=すべて。2026-09-27追加、ユーザー指示(アプリ単位の絞り込み)
+  // 2026-09-27変更、ユーザー指示「タスク一覧のみを1つのウィジェットにしたい」:
+  // 表示(表・絞り込み・クリックジャンプ・コピー・除外)はwidget-tasks.html
+  // (widget-tasks.js)へ切り出し、サイドパネル本体からはiframeで呼び出すだけにした。
+  // ここ(sidepanel.js)には、抽出トリガー(action-row)とGitHub同期・読み込みのみ残す。
 
-  // 表示用の短いラベルのみ組み立てる(URLはtracker-store.js側にsource.urlとして
-  // 「ルームID」的に保持するが、表には出さない。2026-09-13、ユーザー指示)。
-  function roomLabel(source) {
-    if (!source) return "-";
-    const siteLabel = source.mode ? (SITE_LABELS[source.mode] || source.mode) : "";
-    const title = (source.title || "").trim();
-    const shortTitle = title.length > 20 ? title.slice(0, 20) + "…" : title;
-    return [siteLabel, shortTitle].filter(Boolean).join(": ") || "-";
-  }
-
-  // タスクIDボタンをクリックした時、ルーム内の該当箇所へジャンプする
-  // (2026-09-13追加、ユーザー指示「タスクIDを繰り返しクリックしたら、次のタスクIDが
-  // 記載されている場所にジャンプするようにしろ」)。
-  // 2026-09-25改修: 「次の出現箇所」への進行は、こちら側でindexを管理するのではなく
-  // content.js側のwindow.find()の検索カーソルにそのまま任せる(ユーザー指摘
-  // 「Ctrl+Fと同じ仕組みで自動化しろ」への対応。詳細はcontent.js参照)。
-  // 2026-09-26変更(ユーザー指摘「クリックすると大本の回答部分にスキップする仕様に
-  // したい。抽出結果部分に遷移ではない」): 従来は検索テキストに
-  // 【タスクID:回答MM/DD HH:MM:SS-N】という複合文字列そのものを使っていたが、この
-  // 文字列は監査(抽出)自身の出力にしか書かれておらず、タスクIDの起点である
-  // 「元のClaudeの回答」自体には(「タスクID:」も「-N」も付かない)一度も存在しない
-  // ため、結局いつも抽出結果の要約行にしかジャンプできなかった。buildJumpSearchText()
-  // で、起点がAIの回答なら起点自身に実在する素の`【回答MM/DD HH:MM:SS】`マーカーを、
-  // 起点がユーザー発言(マーカー無し)なら`引用`(会話中の一意なフレーズ、
-  // room-task-audit SKILL.md参照)を検索テキストとして使うよう変更した。
-  function buildJumpSearchText(item, displayTaskId) {
-    const marker = item.taskIdMarker; // 例: "回答09/26 01:01:01-1" / "発言09/26 01:01:01-1"
-    if (marker) {
-      const m = marker.match(/^(回答|発言)(.+?)-\d+$/);
-      if (m && m[1] === "回答") {
-        // AI自身の回答マーカーは、起点となった回答そのものの先頭に文字通り
-        // 書かれている(CLAUDE.mdルール14-1)ため、これ自体を検索キーにすれば
-        // 抽出結果ではなく元の回答へジャンプできる。
-        return { text: `【回答${m[2]}】`, label: `タスクID: ${displayTaskId}(元の回答)` };
+  // 2026-09-27追加: ウィジェットiframe(タスク一覧・定例文・スキル呼び出し文言)は
+  // 内容量に応じて高さが変わるため、各ウィジェット(widget-common.jsのreportHeightToParent)
+  // からpostMessageで届く高さをそのままiframeへ反映する。
+  window.addEventListener("message", (event) => {
+    if (!event.data || event.data.type !== "cvb-widget-resize") return;
+    const frames = document.querySelectorAll("iframe.widget-frame");
+    for (const frame of frames) {
+      if (frame.contentWindow === event.source) {
+        frame.style.height = `${event.data.height}px`;
+        break;
       }
     }
-    if (item.quote) {
-      // 起点がユーザー発言、または旧形式でtaskIdMarkerが解析できない場合は、
-      // 会話中の一意な引用文(quote)で検索する(マーカーの無い発言そのものには
-      // ブラケット付き識別子が存在しないため)。
-      return { text: item.quote, label: `タスクID: ${displayTaskId}(引用箇所)` };
-    }
-    // どちらも無い最終フォールバック(旧形式の監査結果由来)。
-    return { text: `【タスクID:${marker || displayTaskId}】`, label: `タスクID: ${displayTaskId}` };
-  }
-
-  async function navigateToTaskId(searchText, statusLabel) {
-    const tabId = await getActiveTabId();
-    if (!tabId) {
-      setStatus(`${SITE_LABELS[mode]}のタブを開いて、アクティブにしてください`, "error");
-      return;
-    }
-    try {
-      const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-scroll-to-occurrence", text: searchText });
-      if (!res || !res.ok) {
-        setStatus(`「${searchText}」がルーム内に見つかりませんでした`, "error");
-        return;
-      }
-      setStatus(`${statusLabel}の箇所へ移動しました(クリックのたびに次の出現箇所へ)`);
-    } catch (e) {
-      setStatus(`${SITE_LABELS[mode]}のタブをリロードしてください`, "error");
-    }
-  }
-
-  function copyItemToClipboard(item) {
-    const text = `【${item.kind}】${item.summary}`;
-    navigator.clipboard.writeText(text).then(
-      () => setStatus("内容をコピーしました"),
-      () => setStatus("コピーに失敗しました", "error")
-    );
-  }
-
-  // 2026-09-27追加、ユーザー指示: manager-room上では複数アプリの話がランダムに出るため、
-  // タスク一覧を「どのアプリ(リポジトリ)の話か」で絞り込めるようにする。
-  // room-task-auditが付与するitem.repo(無ければ「不明」扱い)を元に選択肢を組み立てる。
-  function renderTrackerRepoFilterOptions(allItems) {
-    const repos = new Set(allItems.map((item) => item.repo || "不明"));
-    const prevValue = trackerRepoFilterEl.value;
-    trackerRepoFilterEl.innerHTML = `<option value="">すべてのアプリ</option>`;
-    Array.from(repos)
-      .sort((a, b) => a.localeCompare(b, "ja"))
-      .forEach((repo) => {
-        const opt = document.createElement("option");
-        opt.value = repo;
-        opt.textContent = repo;
-        trackerRepoFilterEl.appendChild(opt);
-      });
-    // 選択中だった値がまだ選択肢に残っていれば維持する(再抽出のたびに絞り込みが
-    // 解除されると使いにくいため)。
-    if (repos.has(prevValue) || prevValue === "") {
-      trackerRepoFilterEl.value = prevValue;
-      trackerRepoFilter = prevValue;
-    } else {
-      trackerRepoFilterEl.value = "";
-      trackerRepoFilter = "";
-    }
-  }
-
-  trackerRepoFilterEl.addEventListener("change", () => {
-    trackerRepoFilter = trackerRepoFilterEl.value;
-    renderTracker();
   });
-
-  function renderTracker() {
-    const tracker = window.TrackerStore.getData();
-    trackerTbodyEl.innerHTML = "";
-    // 表示は「対応中(status!=="done")」のみ。完了・解決済みはJSON(chrome.storage.local)
-    // には残すが表には出さない(2026-09-12、ユーザー指示)。
-    const allActiveItems = (tracker.items || []).filter((item) => item.status !== "done");
-    renderTrackerRepoFilterOptions(allActiveItems);
-    const activeItems = trackerRepoFilter
-      ? allActiveItems.filter((item) => (item.repo || "不明") === trackerRepoFilter)
-      : allActiveItems;
-
-    activeItems.forEach((item, index) => {
-      const tr = document.createElement("tr");
-      const isConsult = item.kind === "相談";
-      tr.innerHTML =
-        `<td></td>` +
-        `<td class="tracker-text"></td>` +
-        `<td class="tracker-room"></td>` +
-        `<td><span class="tracker-badge ${isConsult ? "waiting" : "working"}">${isConsult ? "回答待ち" : "作業中"}${item.uncertain ? "・不確実" : ""}</span></td>` +
-        `<td></td>`;
-
-      const numCell = tr.firstElementChild;
-      const numBtn = document.createElement("button");
-      numBtn.className = "tracker-num";
-      numBtn.type = "button";
-      // 2026-09-13追加(ユーザー指示「種別はタスクIDに変えろ」): 種別ラベルではなく
-      // タスクID(表示順の通し番号、1始まり)を表示する。
-      // 2026-09-25変更: 表示ラベルは引き続き分かりやすい表示順連番のままにするが、
-      // ページ内検索(クリックジャンプ)にはbuildJumpSearchText()(上部参照)が
-      // item.taskIdMarker/item.quoteから組み立てた検索テキストを使う。
-      // 2026-09-26変更: クリックした際に抽出結果の要約行ではなく、起点となった
-      // 元のClaudeの回答(またはユーザー発言の引用箇所)へジャンプするように変更。
-      const displayTaskId = index + 1;
-      const jump = buildJumpSearchText(item, displayTaskId);
-      numBtn.textContent = `タスクID: ${displayTaskId}`;
-      numBtn.title = "クリックでルーム内の該当箇所(元の回答)へ移動(連続クリックで次の出現箇所へ)";
-      numBtn.onclick = () => navigateToTaskId(jump.text, jump.label);
-      numCell.appendChild(numBtn);
-
-      // 2026-09-27追加、ユーザー指示: どのアプリの話かを小さなバッジで内容欄の先頭に表示する
-      // (狭いサイドパネル幅では列を増やさず、バッジで表現する方が実用的なため)。
-      const textCell = tr.querySelector(".tracker-text");
-      const repoBadge = document.createElement("span");
-      repoBadge.className = "tracker-repo-badge";
-      repoBadge.textContent = item.repo || "不明";
-      textCell.appendChild(repoBadge);
-      textCell.appendChild(document.createTextNode(item.summary || "(内容不明)"));
-      tr.querySelector(".tracker-room").textContent = roomLabel(item.source);
-
-      const actionsCell = tr.lastElementChild;
-      const copyBtn = document.createElement("button");
-      copyBtn.className = "tracker-copy";
-      copyBtn.type = "button";
-      copyBtn.textContent = "📋";
-      copyBtn.title = "内容をコピー";
-      copyBtn.onclick = () => copyItemToClipboard(item);
-      actionsCell.appendChild(copyBtn);
-
-      const dismissBtn = document.createElement("button");
-      dismissBtn.className = "tracker-dismiss";
-      dismissBtn.type = "button";
-      dismissBtn.textContent = "✕";
-      dismissBtn.title = "一覧から外す(次回の抽出でまだ未解決なら再度出ます)";
-      dismissBtn.onclick = () => window.TrackerStore.dismissItem(item.id);
-      actionsCell.appendChild(dismissBtn);
-
-      trackerTbodyEl.appendChild(tr);
-    });
-
-    trackerSectionEl.classList.toggle("has-items", activeItems.length > 0);
-  }
-
-  window.TrackerStore.onChange(renderTracker);
 
   // content.jsからの「応答が準備できた」通知を待つ
   chrome.runtime.onMessage.addListener((msg) => {
@@ -1175,82 +1010,24 @@
   }
 
   // ---- 定例文ボタン ----
-  async function insertTextToPage(text) {
-    const tabId = await getActiveTabId();
-    if (!tabId) {
-      setStatus(`${SITE_LABELS[mode]}のタブを開いて、アクティブにしてください`, "error");
-      return;
-    }
-    try {
-      const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-insert-text", text });
-      if (!res || !res.ok) {
-        setStatus("入力欄が見つかりませんでした。手動セレクタ設定を確認してください", "error");
-      }
-    } catch (e) {
-      setStatus("ページとの通信に失敗しました(ページを再読み込みしてください)", "error");
-    }
-  }
-
-  // 2026-09-18変更、ユーザー指示「定例文の内容は、実際に入力する文言をそのまま表示で
-  // よい」: 以前はt.label(説明文)をボタンに表示していたが、実際に入力される文言
-  // (t.text)を表示するよう変更した。
-  // 2026-09-19変更、ユーザー指示「定例文は、省略せずに全体を表示しろ」「スキルの
-  // 文言については、別の折りたたみにしろ」: 24文字での省略表示をやめ全文表示に、
-  // またtype:"skill"の定例文(スキル呼び出しフレーズ)は#phrase-buttonsではなく
-  // 別の折りたたみ(#skill-phrase-buttons、「🔧 スキル呼び出し文言」)へ分離した。
-  // 2026-09-19変更、ユーザー指示「?マークを追加してそれをクリックしたら
-  // ショウウィンドウ(説明)を表示にして」: スキル呼び出し文言(type:"skill")に
-  // description(どういう時に使うか)がある場合、ボタンの横に❓アイコンを表示し、
-  // クリックで説明の開閉をトグルする(ホバーはモバイル=タッチデバイスでは
-  // 使えないため、PC/モバイル共通でクリック/タップ方式に統一した)。
-  function renderTemplateButtons(templates) {
-    phraseButtonsEl.innerHTML = "";
-    skillPhraseButtonsEl.innerHTML = "";
-    templates.forEach((t) => {
-      const btn = document.createElement("button");
-      btn.className = "phrase-btn";
-      btn.textContent = t.text;
-      btn.title = t.text;
-      btn.addEventListener("click", () => insertTextToPage(t.text));
-
-      if (t.type === "skill" && t.description) {
-        const row = document.createElement("div");
-        row.className = "phrase-row";
-        const helpBtn = document.createElement("button");
-        helpBtn.type = "button";
-        helpBtn.className = "phrase-help-btn";
-        helpBtn.textContent = "❓";
-        helpBtn.title = "この文言の使いどころを表示";
-        const descEl = document.createElement("div");
-        descEl.className = "phrase-desc";
-        descEl.textContent = t.description;
-        descEl.style.display = "none";
-        helpBtn.addEventListener("click", () => {
-          descEl.style.display = descEl.style.display === "none" ? "block" : "none";
-        });
-        row.appendChild(btn);
-        row.appendChild(helpBtn);
-        skillPhraseButtonsEl.appendChild(row);
-        skillPhraseButtonsEl.appendChild(descEl);
-      } else {
-        (t.type === "skill" ? skillPhraseButtonsEl : phraseButtonsEl).appendChild(btn);
-      }
-    });
-  }
+  // 2026-09-27変更、ユーザー指示「スキル呼び出し文言と定例文も同じ様にウィジェット
+  // 管理として」: ボタン一覧の描画・クリックでの入力欄への反映は
+  // widget-phrases.html/widget-skill-phrases.html(widget-phrase-buttons.js)へ切り出した。
+  // このページ(サイドパネル本体)はcvb_templatesの読み込み・編集(textarea)・保存
+  // だけを担当する。保存時のchrome.storage.local.set()がchrome.storage.onChangedを
+  // 発火させ、各ウィジェット側が自動的に再描画する。
 
   async function loadTemplates() {
     const stored = await chrome.storage.local.get("cvb_templates");
     const templates = stored.cvb_templates && stored.cvb_templates.length
       ? stored.cvb_templates
       : DEFAULT_TEMPLATES;
-    renderTemplateButtons(templates);
     phraseEditorEl.value = templatesToText(templates);
   }
 
   phraseSaveBtn.addEventListener("click", async () => {
     const templates = parseTemplatesText(phraseEditorEl.value);
     await chrome.storage.local.set({ cvb_templates: templates });
-    renderTemplateButtons(templates);
   });
 
   // ---- 初期化 ----
@@ -1260,7 +1037,10 @@
     updateModeUI();
     setPanelMode(stored.cvb_panel_mode === "list" ? "list" : "voice");
 
-    await window.TrackerStore.load(); // renderTrackerはonChangeで自動的に呼ばれる
+    // 2026-09-27変更: このページ自体はもうタスク一覧を描画しない(widget-tasks.html側の
+    // 役目)が、syncTrackerToGithub()がgetData()で最新のトラッカーをGitHubへ送るため、
+    // このページ自身のTrackerStoreインスタンスも読み込んでおく必要がある。
+    await window.TrackerStore.load();
     await window.RoomLogStore.load();
 
     rate = typeof stored.cvb_rate === "number" ? stored.cvb_rate : 1.0;

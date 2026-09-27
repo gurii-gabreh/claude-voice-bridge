@@ -208,7 +208,7 @@
 
   #tracker-section {
     width: 100%;
-    display: none;
+    display: flex;
     flex-direction: column;
     gap: 6px;
     background: var(--surface);
@@ -216,98 +216,15 @@
     border-radius: 8px;
     padding: 8px 10px;
   }
-  #tracker-section.has-items { display: flex; }
-  #tracker-table {
+  /* 2026-09-27変更、ユーザー指示によりタスク一覧をwidget-tasks.htmlへ切り出したため、
+     空/非空でのこの枠自体の表示切替は不要になった(空表示はウィジェット内部が担う)。 */
+  .widget-frame {
     width: 100%;
-    border-collapse: collapse;
-    font-size: 11px;
-  }
-  #tracker-table th {
-    text-align: left;
-    color: var(--ink-soft);
-    font-weight: 700;
-    font-size: 10px;
-    padding: 4px 6px;
-    border-bottom: 1px solid var(--panel-border);
-  }
-  #tracker-table td {
-    padding: 5px 6px;
-    border-bottom: 1px solid var(--panel-border);
-    color: var(--ink);
-    vertical-align: top;
-  }
-  #tracker-table tr:last-child td { border-bottom: none; }
-  .tracker-num {
-    white-space: nowrap;
-    color: var(--accent);
-    font-size: 10px;
-    background: none;
     border: none;
-    padding: 0;
-    cursor: pointer;
-    text-decoration: underline dotted;
-    font-family: inherit;
+    display: block;
   }
-  .tracker-num:hover { color: var(--ink); }
-  .tracker-num[disabled] { color: var(--ink-soft); cursor: default; text-decoration: none; }
-  .tracker-copy {
-    background: none;
-    border: 1px solid var(--panel-border);
-    color: var(--ink-soft);
-    border-radius: 4px;
-    font-size: 10px;
-    padding: 1px 6px;
-    cursor: pointer;
-    white-space: nowrap;
-    margin-right: 4px;
-  }
-  .tracker-copy:hover { border-color: var(--accent); color: var(--accent); }
-  .tracker-room { white-space: nowrap; color: var(--ink-soft); font-size: 10px; max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
-  #tracker-repo-filter {
-    width: 100%;
-    box-sizing: border-box;
-    font-size: 11px;
-    font-family: inherit;
-    padding: 4px 6px;
-    margin-bottom: 6px;
-    border: 1px solid var(--panel-border);
-    border-radius: 6px;
-    background: var(--surface);
-    color: var(--ink);
-  }
-  .tracker-repo-badge {
-    display: inline-block;
-    font-size: 9px;
-    font-weight: 700;
-    padding: 1px 5px;
-    border-radius: 3px;
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--ink-soft);
-    margin-right: 4px;
-    white-space: nowrap;
-    vertical-align: middle;
-  }
-  .tracker-badge {
-    display: inline-block;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 1px 6px;
-    border-radius: 4px;
-    white-space: nowrap;
-  }
-  .tracker-badge.waiting { background: rgba(255,84,104,0.18); color: var(--error); }
-  .tracker-badge.working { background: rgba(77,168,255,0.18); color: var(--speaking); }
-  .tracker-dismiss {
-    background: none;
-    border: 1px solid var(--panel-border);
-    color: var(--ink-soft);
-    border-radius: 4px;
-    font-size: 10px;
-    padding: 1px 6px;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .tracker-dismiss:hover { border-color: var(--accent); color: var(--accent); }
+  /* 2026-09-27変更: タスク一覧本体の表・バッジ・絞り込み等のスタイルはwidget-common.css
+     (widget-tasks.html用)へ移した。ここでは元々使われていなかった.tracker-bulletsのみ残す。 */
   .tracker-bullets {
     margin: 0;
     padding-left: 16px;
@@ -460,7 +377,16 @@
      追加しろ」: タスク一覧・定例文・スキル呼び出し文言・JSON管理方法などの
      主要な折りたたみに共通のスタイル(見出しをやや大きく、開閉が分かる
      矢印アイコン付き)を適用する。 */
-  .collapsible-block { margin-bottom: 10px; }
+  /* 2026-09-27変更、ユーザー指示「使用方法とかの部分をもう少しデザインチックに」:
+     タスク一覧枠(#tracker-section)と同じ「背景+枠線+角丸」のカード風スタイルに統一し、
+     プレーンな文字だけの表示から独立したブロックだと分かりやすい見た目にした。 */
+  .collapsible-block {
+    margin-bottom: 10px;
+    background: var(--surface);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 2px 10px;
+  }
   .collapsible-summary {
     display: flex;
     align-items: center;
@@ -468,9 +394,11 @@
     font-size: 13px;
     font-weight: 700;
     color: var(--ink);
-    padding: 6px 2px;
+    padding: 8px 2px;
     list-style: none;
+    cursor: pointer;
   }
+  .collapsible-summary:hover { color: var(--accent); }
   .collapsible-summary::-webkit-details-marker { display: none; }
   .collapsible-summary::before {
     content: "▶";
@@ -482,14 +410,20 @@
   .collapsible-block[open] > .collapsible-summary::before {
     transform: rotate(90deg);
   }
+  .collapsible-block[open] {
+    border-color: var(--accent);
+  }
   .collapsible-body {
-    padding: 4px 2px 2px;
+    padding: 2px 2px 10px;
     font-size: 11.5px;
     line-height: 1.6;
+    border-top: 1px solid var(--panel-border);
+    margin-top: 2px;
+    padding-top: 8px;
   }
   .collapsible-body p { margin: 0 0 8px; }
   .collapsible-body code {
-    background: var(--surface);
+    background: rgba(255, 255, 255, 0.08);
     padding: 1px 4px;
     border-radius: 3px;
     font-size: 10.5px;
@@ -511,8 +445,9 @@
   <div id="hud-title">AI開発情報一覧</div>
 
   <div id="panel-tabs">
-    <button class="panel-tab active" id="panel-tab-voice" type="button">🎙️ ボイス</button>
+    <!-- 2026-09-27変更、ユーザー指示「ボイスと一覧の位置を左右変えて、左側に一覧を設けて」 -->
     <button class="panel-tab" id="panel-tab-list" type="button">📋 一覧</button>
+    <button class="panel-tab active" id="panel-tab-voice" type="button">🎙️ ボイス</button>
   </div>
 
   <!-- 2026-09-13不具合修正: 以前は#statusが#voice-mode-panel内にあり、一覧モード
@@ -572,15 +507,10 @@
     <div id="tracker-section">
       <div id="tracker-section-label">AI開発情報一覧</div>
       <div class="section-title">📋 未解決の相談・進行中のタスク(見逃し防止)</div>
-      <select id="tracker-repo-filter" title="アプリ(リポジトリ)で絞り込み">
-        <option value="">すべてのアプリ</option>
-      </select>
-      <table id="tracker-table">
-        <thead>
-          <tr><th>タスクID</th><th>内容</th><th>ルーム</th><th>ステータス</th><th></th></tr>
-        </thead>
-        <tbody id="tracker-tbody"></tbody>
-      </table>
+      <!-- 2026-09-27追加、ユーザー指示「タスク一覧のみを1つのウィジェットにしたい」:
+           表示・絞り込み・クリックジャンプはwidget-tasks.htmlへ切り出し、ここではiframeで
+           呼び出すだけにした。抽出トリガー(action-row)はこれまで通りこのページ側に残す。 -->
+      <iframe id="tasks-widget-frame" class="widget-frame" src="widget-tasks.html" title="タスク一覧"></iframe>
     </div>
     <details class="collapsible-block">
       <summary class="collapsible-summary">📦 タスク一覧のJSON管理方法</summary>
@@ -598,7 +528,10 @@
     <details class="collapsible-block">
       <summary class="collapsible-summary">📌 定例文(押すと入力欄に反映、送信は自分で押す)</summary>
       <div class="collapsible-body">
-        <div id="phrase-buttons"></div>
+        <!-- 2026-09-27追加、ユーザー指示「スキル呼び出し文言と定例文も同じ様にウィジェット管理として」:
+             ボタン一覧の表示・クリック挿入はwidget-phrases.htmlへ切り出し、iframeで呼び出す。
+             編集(下のtextarea+保存)はこれまで通りこのページ側に残す。 -->
+        <iframe id="phrases-widget-frame" class="widget-frame" src="widget-phrases.html" title="定例文"></iframe>
         <details>
           <summary>定例文を編集</summary>
           <p style="margin:6px 0;font-size:11px;color:var(--ink-soft)">
@@ -618,7 +551,7 @@
     <details class="collapsible-block">
       <summary class="collapsible-summary">🔧 スキル呼び出し文言(押すと入力欄に反映)</summary>
       <div class="collapsible-body">
-        <div id="skill-phrase-buttons"></div>
+        <iframe id="skill-phrases-widget-frame" class="widget-frame" src="widget-skill-phrases.html" title="スキル呼び出し文言"></iframe>
       </div>
     </details>
   </div>
