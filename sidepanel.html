@@ -81,25 +81,44 @@
     display: flex;
     gap: 8px;
   }
+  /* 2026-09-27変更、ユーザー指摘「タスク一覧を抽出と一覧・ボイスが似たようなボタンで
+     分かりづらい。別機能であることをわかりやすくしろ」への対応。上部の「📋 一覧/
+     🎙️ ボイス」タブ(.panel-tab、ピル形+アウトライン)と形が同じだと、意味の異なる
+     ボタン(モード切替 vs 実行操作)が混同されやすいため、カード枠で囲んで独立した
+     操作ブロックだと分かるようにし、ボタン自体の形(角丸の程度)・塗りも変えた。 */
+  #action-row-wrap {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+  #action-row-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
   #action-row {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
-    justify-content: center;
   }
   #extract-room-btn, #sync-github-btn, #load-tracker-json-btn {
     font-size: 11px;
     font-family: inherit;
     font-weight: 700;
-    padding: 6px 14px;
-    border-radius: 20px;
-    border: 1px solid var(--panel-border);
-    background: rgba(41, 230, 255, 0.05);
-    color: var(--accent);
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: none;
+    background: var(--accent);
+    color: #05141a;
     cursor: pointer;
   }
   #extract-room-btn:hover, #sync-github-btn:hover, #load-tracker-json-btn:hover {
-    background: rgba(41, 230, 255, 0.12);
+    filter: brightness(1.1);
   }
   .mode-btn {
     font-size: 11px;
@@ -455,10 +474,13 @@
        一覧モードでのみ使うボタン列だが、表示位置は処理ログより上にしたいとの指示のため
        #list-mode-panelの外(共通領域)へ出した。一覧モードの時だけ表示されるよう、
        sidepanel.jsのsetPanelMode()側でdisplayを切り替える。 -->
-  <div id="action-row">
-    <button id="extract-room-btn" type="button" title="ルームの抽出→GitHubへ同期→GitHubから読み込みを、1ステップずつボタンで進めます。抽出がうまくいかなかった場合は、途中からでもこのボタンを押し直せます">🔍 タスク一覧を抽出</button>
-    <button id="sync-github-btn" type="button" hidden>☁️ タスク一覧→JSONへ同期</button>
-    <button id="load-tracker-json-btn" type="button" hidden title="タスク一覧と定例文の両方を、GitHub上の最新内容に更新します">📥 JSONから一覧を読み込む</button>
+  <div id="action-row-wrap">
+    <div id="action-row-label">タスク一覧の更新操作</div>
+    <div id="action-row">
+      <button id="extract-room-btn" type="button" title="ルームの抽出→GitHubへ同期→GitHubから読み込みを、1ステップずつボタンで進めます。抽出がうまくいかなかった場合は、途中からでもこのボタンを押し直せます">🔍 タスク一覧を抽出</button>
+      <button id="sync-github-btn" type="button" hidden>☁️ タスク一覧→JSONへ同期</button>
+      <button id="load-tracker-json-btn" type="button" hidden title="タスク一覧と定例文の両方を、GitHub上の最新内容に更新します">📥 JSONから一覧を読み込む</button>
+    </div>
   </div>
 
   <!-- 2026-09-13不具合修正: 以前は#statusが#voice-mode-panel内にあり、一覧モード

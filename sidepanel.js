@@ -30,7 +30,7 @@
   const panelTabListBtn = document.getElementById("panel-tab-list");
   const voiceModePanelEl = document.getElementById("voice-mode-panel");
   const listModePanelEl = document.getElementById("list-mode-panel");
-  const actionRowEl = document.getElementById("action-row");
+  const actionRowEl = document.getElementById("action-row-wrap");
   const rateSliderEl = document.getElementById("rate-slider");
   const rateValueEl = document.getElementById("rate-value");
   const voiceSelectEl = document.getElementById("voice-select");
@@ -84,8 +84,9 @@
     listModePanelEl.style.display = isVoice ? "none" : "flex";
     // 2026-09-27変更、ユーザー指示「タスク更新ボタンは処理ログの上に表示にして」:
     // #action-rowを#list-mode-panelの外(処理ログより上の共通領域)へ移したため、
-    // 表示/非表示はここで一覧モードかどうかに応じて切り替える。
-    actionRowEl.style.display = isVoice ? "none" : "flex";
+    // 表示/非表示はここで一覧モードかどうかに応じて切り替える。カード枠(#action-row-wrap)
+    // ごと切り替えるため、中の#action-rowはCSS側で常時flexのままにしてある。
+    actionRowEl.style.display = isVoice ? "none" : "block";
     chrome.storage.local.set({ cvb_panel_mode: panel });
   }
   panelTabVoiceBtn.addEventListener("click", () => setPanelMode("voice"));
