@@ -111,6 +111,18 @@ Knowledge-Dashboardの「📐 アプリ基本設計」タブと同じ、progress
 - モバイル版(`webapp/index.html`): 「📐 アプリ基本設計」という折りたたみセクションとして追加。初めて開いた時に`data/requirements.json`をfetchする(常時表示のタスク一覧と違い、追加のfetchが発生するため遅延読み込みにしている)。
 - どちらも表示ロジックはKnowledge-Dashboard側の実装(designAppLabel/renderDesignStats/renderConcernCard等)をそのまま移植したもので、3箇所(Knowledge-Dashboard・claude-voice-bridge PC版・claude-voice-bridgeモバイル版)で同じ見た目・同じデータ構造の解釈になるようにしている。
 
+## 「📓 ジャーナル面談」機能(2026-09-27追加、CVB-002)
+
+1日をAIと音声で面談しながら振り返る機能。マネージャールームでの新規相談から着手した(標準10項目インタビューの経緯・技術選定の理由はprogress-tracker-dashboardの`data/tasks.json`のCVB-002を参照)。
+
+- **面談そのものはこのリポジトリの外(Geminiアプリ)で行う**: Gemini Live(音声対話)+ Gems(カスタム指示・ナレッジ添付)を使う。理由は、自前でAPIを呼び出す実装をしなくても、無料のまま自然な会話テンポが実現できるため(NotebookLM=現Gemini Notebookは個人無料の公開APIが無く自動化できないため不採用。Gemini Live API(自前開発向け)は無料枠を超えると従量課金されるため、永久無料前提のCLAUDE.mdルール9と衝突する可能性があり不採用)。
+- **このリポジトリが担当するのは記録だけ**: Gemini Live終了時に自動保存されるトランスクリプト(AI生成の要約ではなく実際の文字起こし)を、ユーザーがコピーして貼り付けると、GAS経由で`data/journal.json`のentries配列へ1件そのまま追記される(AIによる要約・構造化はしない。ユーザー指示「変にまとめてほしくない」)。
+- **Gemの面談官プロンプト**は、決まった質問(今日できたこと/できなかったこと、それぞれの良かった点・悪かった点、明日の目標)→雑談・相談→曖昧な回答は深掘り→悪かった点は対策を聞く→落ち込んでいたら励ます、という内容で固定し、`widget-journal.html`(PC版)・`webapp/index.html`(モバイル版)の両方にコピー用として埋め込んである(正本は`data/tasks.json`のCVB-002ではなくこの2ファイル。プロンプトを変更する場合は両方を同時に更新すること)。
+- **画面構成**: PC版・モバイル版の両方に、Knowledge-Dashboardと同じ見た目(下線スタイル)の最上位タブ`[AI開発情報一覧][ジャーナル面談]`を新設した(ユーザー指示「一番上にタブを作り、AI開発情報一覧とジャーナル面談で分ける構成にしたい」「イメージマネージャアプリ(Knowledge-Dashboard)と同じようにしたい」)。既存の全コンテンツ(タスク一覧・ボイス・基本設計・定例文・スキル呼び出し文言・手動セレクタ設定)は「AI開発情報一覧」タブの配下にまとめて残っており、PC版はタブが2階層(最上位タブ→従来の📋一覧/🎙️ボイス/📐基本設計タブ)になっている。
+- PC版の中身は`widget-journal.html`/`widget-journal.js`へ切り出し、他のウィジェットと同じくiframeで呼び出す(GASへの保存POSTはウィジェット単体で完結し、host側の排他制御を必要としないため)。
+- `gas/code.gs`に`saveJournal`アクションを追加した。**コード変更後はApps Scriptエディタでの手動再デプロイが必要**(`gas/README.md`参照。再デプロイが完了するまでジャーナル面談タブの保存は失敗する)。
+- 傾向データ化(良かった点・悪かった点の抽出等)は今回のスコープに含めていない。`data/journal.json`の各entryには`analyzed: false`を持たせてあり、将来`data/room-log.json`→`data/weekly-digest.json`と同じ「生ログ蓄積→別途AIが要約」の2段構成で、別のRoutine/スキルを追加する想定。
+
 ## モバイル(iPhone等)向けWeb版タスク一覧
 
 2026-09-19追加、ユーザー指示「携帯で見るように、サイドアプリの一覧部分だけをwebアプリで見えるようにしたい」への対応。`webapp/index.html`を`.github/workflows/deploy-pages.yml`でGitHub Pagesへ自動デプロイし、`https://gurii-gabreh.github.io/claude-voice-bridge/`でPC・iPhoneどちらからも閲覧できるようにした。

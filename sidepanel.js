@@ -39,6 +39,10 @@
   const infoModalBtn = document.getElementById("info-modal-btn");
   const infoModalOverlayEl = document.getElementById("info-modal-overlay");
   const infoModalCloseBtn = document.getElementById("info-modal-close");
+  const topTabInfoBtn = document.getElementById("top-tab-info");
+  const topTabJournalBtn = document.getElementById("top-tab-journal");
+  const topViewInfoEl = document.getElementById("top-view-info");
+  const topViewJournalEl = document.getElementById("top-view-journal");
 
   micPermissionBtn.addEventListener("click", () => {
     chrome.tabs.create({ url: chrome.runtime.getURL("permission.html") });
@@ -122,6 +126,21 @@
   panelTabVoiceBtn.addEventListener("click", () => setPanelMode("voice"));
   panelTabListBtn.addEventListener("click", () => setPanelMode("list"));
   panelTabDesignBtn.addEventListener("click", () => setPanelMode("design"));
+
+  // ---- 最上位タブ(AI開発情報一覧 / ジャーナル面談) ----
+  // 2026-09-27追加(CVB-002)、ユーザー指示「一番上にタブを作り、AI開発情報一覧と
+  // ジャーナル面談で分ける構成にしたい」。上のsetPanelMode()(一覧/ボイス/基本設計)は
+  // 「AI開発情報一覧」タブの中の、もう1階層下のタブとしてそのまま残る。
+  function setTopTab(tab) {
+    const isInfo = tab === "info";
+    topTabInfoBtn.classList.toggle("active", isInfo);
+    topTabJournalBtn.classList.toggle("active", !isInfo);
+    topViewInfoEl.style.display = isInfo ? "flex" : "none";
+    topViewJournalEl.style.display = isInfo ? "none" : "flex";
+    chrome.storage.local.set({ cvb_top_tab: tab });
+  }
+  topTabInfoBtn.addEventListener("click", () => setTopTab("info"));
+  topTabJournalBtn.addEventListener("click", () => setTopTab("journal"));
 
   // ---- claude-voice-bridge専用のGAS中継(gas/README.md参照) ----
   // GitHubのdata/tracker.json・data/knowledge-log.jsonへの書き込みを担う。
@@ -1105,7 +1124,9 @@
 
   // ---- 初期化 ----
   async function init() {
-    const stored = await chrome.storage.local.get(["cvb_mode", "cvb_rate", "cvb_voice_name", "cvb_panel_mode"]);
+    const stored = await chrome.storage.local.get([
+      "cvb_mode", "cvb_rate", "cvb_voice_name", "cvb_panel_mode", "cvb_top_tab",
+    ]);
     if (stored.cvb_mode === "claude" || stored.cvb_mode === "gemini") mode = stored.cvb_mode;
     updateModeUI();
     // 2026-09-27変更、ユーザー指示「defaultは一覧側を押している状態にして」:
@@ -1114,6 +1135,8 @@
     // そのまま復元し、未設定・不正値の場合のみ一覧をデフォルトにする。
     const validModes = ["voice", "list", "design"];
     setPanelMode(validModes.includes(stored.cvb_panel_mode) ? stored.cvb_panel_mode : "list");
+    // 2026-09-27追加(CVB-002): 最上位タブ(AI開発情報一覧/ジャーナル面談)も同様に復元。
+    setTopTab(stored.cvb_top_tab === "journal" ? "journal" : "info");
     showUpdateStep("extract"); // 起動時は常に最初のステップから
 
     // 2026-09-27変更: このページ自体はもうタスク一覧を描画しない(widget-tasks.html側の

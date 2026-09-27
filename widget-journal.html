@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ジャーナル面談</title>
+<link rel="stylesheet" href="widget-common.css">
+<style>
+  /* Claude Voice Bridge — 「📓 ジャーナル面談」ウィジェット(2026-09-27追加、CVB-002)
+     面談そのものはGeminiアプリ(Gemini Live+Gem)側で行う。ここが担当するのは
+     (1)Gem設定用プロンプトの提供、(2)面談後トランスクリプトの貼り付け保存、
+     (3)過去記録の一覧表示のみ(AIによる要約・構造化はしない)。 */
+  #journal-note {
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin: 0 0 8px;
+    line-height: 1.5;
+  }
+  #gem-prompt {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 200px;
+    padding: 8px;
+    font-size: 10.5px;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 6px;
+  }
+  #copy-gem-prompt-btn, #save-journal-btn {
+    font-size: 11px;
+    font-family: inherit;
+    font-weight: 700;
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--panel-border);
+    background: var(--surface);
+    color: var(--accent);
+    cursor: pointer;
+  }
+  #copy-gem-prompt-btn:hover, #save-journal-btn:hover { border-color: var(--accent); }
+  #journal-date {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    font-size: 11px;
+    font-family: inherit;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    margin-bottom: 6px;
+  }
+  #journal-transcript {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 110px;
+    padding: 8px;
+    font-size: 11.5px;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 6px;
+  }
+  .journal-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    margin: 14px 0 6px;
+  }
+  #journal-list { display: flex; flex-direction: column; gap: 6px; }
+  .journal-card {
+    background: var(--surface);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 6px 8px;
+  }
+  .journal-card-date { font-size: 10px; color: var(--ink-soft); margin-bottom: 3px; }
+  .journal-card-body {
+    font-size: 11.5px;
+    color: var(--ink);
+    max-height: 4.4em;
+    overflow: hidden;
+    cursor: pointer;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .journal-card-body.expanded { max-height: none; }
+  #journal-empty { color: var(--ink-soft); font-size: 11px; }
+</style>
+</head>
+<body>
+  <p id="journal-note">面談はGeminiアプリ(Gemini Live+Gem)で行い、終了時に自動保存されるトランスクリプトをここに貼って記録します(AIによる要約はしません)。</p>
+
+  <details>
+    <summary>🎙️ Gemの面談官プロンプト(コピー用)</summary>
+    <textarea id="gem-prompt" readonly></textarea>
+    <button id="copy-gem-prompt-btn" type="button">📋 プロンプトをコピー</button>
+  </details>
+
+  <div class="journal-section-title">📝 トランスクリプトを貼って記録</div>
+  <input type="date" id="journal-date">
+  <textarea id="journal-transcript" placeholder="Gemini Liveのトランスクリプトをそのまま貼り付け"></textarea>
+  <button id="save-journal-btn" type="button">💾 保存</button>
+  <div id="widget-status"></div>
+
+  <div class="journal-section-title">📖 過去のジャーナル</div>
+  <div id="journal-list"></div>
+  <div id="journal-empty" style="display:none;">まだ記録がありません。</div>
+
+  <script src="widget-common.js"></script>
+  <script src="widget-journal.js"></script>
+</body>
+</html>

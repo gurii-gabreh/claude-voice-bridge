@@ -222,6 +222,77 @@
     line-height: 1.5;
   }
 
+  /* 2026-09-27追加(CVB-002)。Knowledge-Dashboard(dashboard.html)の上部タブと
+     同じ、下線スタイルのタブ切替。 */
+  .tab-row {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--panel-border);
+    margin-bottom: 16px;
+    overflow-x: auto;
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 10px 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: inherit;
+  }
+  .tab-btn:hover { color: var(--ink); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  input[type="date"] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px;
+    font-size: 12.5px;
+    font-family: inherit;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    margin-bottom: 6px;
+  }
+  #gem-prompt {
+    width: 100%;
+    min-height: 220px;
+    padding: 8px;
+    font-size: 11.5px;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    font-family: inherit;
+    resize: vertical;
+  }
+  #journal-transcript {
+    width: 100%;
+    min-height: 140px;
+    padding: 8px;
+    font-size: 12.5px;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 6px;
+  }
+  #journal-status { color: var(--ink-soft); font-size: 11.5px; margin-bottom: 4px; min-height: 1.4em; }
+  #journal-list { display: flex; flex-direction: column; gap: 8px; }
+  #journal-empty { color: var(--ink-soft); font-size: 12.5px; }
+  .journal-card-body {
+    max-height: 4.8em;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .journal-card-body.expanded { max-height: none; }
+
   footer {
     color: var(--ink-soft);
     font-size: 10.5px;
@@ -308,6 +379,16 @@
   <h1>AI開発情報一覧(Web版)</h1>
   <p class="sub">サイドパネル拡張機能と同じGitHub上のデータを表示・更新できる、モバイル対応ページです。</p>
 
+  <!-- 2026-09-27追加(CVB-002)、ユーザー指示「一番上にタブを作りAI開発情報一覧と
+       ジャーナル面談で分ける構成にしたい」。見た目はKnowledge-Dashboard(dashboard.html)
+       の上部タブ(下線スタイル)に合わせている。 -->
+  <div class="tab-row" role="tablist" id="tabRow">
+    <button type="button" class="tab-btn active" id="tabBtnInfo" role="tab" aria-selected="true">📋 AI開発情報一覧</button>
+    <button type="button" class="tab-btn" id="tabBtnJournal" role="tab" aria-selected="false">📓 ジャーナル面談</button>
+  </div>
+
+  <div class="tab-view" id="viewInfo">
+
   <details class="collapsible-block">
     <summary class="collapsible-summary">❓ このページの使い方</summary>
     <div class="collapsible-body">
@@ -381,6 +462,54 @@
       <div id="skill-phrase-list" class="phrase-list"></div>
     </div>
   </details>
+
+  </div><!-- /#viewInfo -->
+
+  <!-- 2026-09-27追加(CVB-002)、ユーザー指示「1日の振り返りをAIと面談しながらやりたい」。
+       面談そのものはGeminiアプリ(Gemini Live+Gems)側で行い、ここでは(1)Gem設定用の
+       面談官プロンプトの提供、(2)面談終了後に自動保存されるトランスクリプトの貼り付け・
+       保存、(3)過去の記録の一覧表示、のみを担当する(AIによる要約はしない、生データのまま
+       data/journal.jsonへ保存する)。 -->
+  <div class="tab-view" id="viewJournal" style="display:none;">
+
+    <details class="collapsible-block" open>
+      <summary class="collapsible-summary">❓ 使い方</summary>
+      <div class="collapsible-body">
+        <p><strong>①</strong> Geminiアプリで、下の「面談官プロンプト」を貼ったGem(またはそのGem)を開き、音声で面談する。</p>
+        <p><strong>②</strong> 面談を終了すると、Gemini Liveのトランスクリプト(文字起こし)がチャット履歴に自動保存されるので、それをコピーする。</p>
+        <p><strong>③</strong> 下の貼り付け欄にそのまま貼って「💾 保存」を押す。AIによる要約はせず、貼った内容がそのまま記録されます。</p>
+      </div>
+    </details>
+
+    <details class="collapsible-block">
+      <summary class="collapsible-summary">🎙️ Gemの面談官プロンプト(コピー用)</summary>
+      <div class="collapsible-body">
+        <p class="sub" style="margin-bottom:6px;">Geminiアプリの「Gem」作成画面の指示欄に、これをそのまま貼り付けてください。</p>
+        <textarea id="gem-prompt" rows="16" readonly></textarea>
+        <div class="btn-row">
+          <button id="copy-gem-prompt-btn" type="button">📋 プロンプトをコピー</button>
+        </div>
+      </div>
+    </details>
+
+    <section>
+      <div class="section-title">📝 面談後のトランスクリプトを貼って記録</div>
+      <label class="sub" style="display:block;margin-bottom:4px;" for="journal-date">振り返り対象の日付</label>
+      <input type="date" id="journal-date">
+      <textarea id="journal-transcript" placeholder="Gemini Liveのトランスクリプトをそのまま貼り付けてください"></textarea>
+      <div class="btn-row">
+        <button id="save-journal-btn" type="button">💾 保存</button>
+      </div>
+      <div id="journal-status"></div>
+    </section>
+
+    <section>
+      <div class="section-title">📖 過去のジャーナル</div>
+      <div id="journal-list"></div>
+      <div id="journal-empty" style="display:none;">まだ記録がありません。</div>
+    </section>
+
+  </div><!-- /#viewJournal -->
 
   <footer id="last-updated"></footer>
 
@@ -805,6 +934,152 @@
 
   document.getElementById("design-block").addEventListener("toggle", (e) => {
     if (e.target.open) loadDesign();
+  });
+
+  // ---- 最上位タブ(AI開発情報一覧 / ジャーナル面談) ----
+  // 2026-09-27追加(CVB-002)、ユーザー指示「一番上にタブを作り、AI開発情報一覧と
+  // ジャーナル面談で分ける構成にしたい」。
+  const tabBtnInfoEl = document.getElementById("tabBtnInfo");
+  const tabBtnJournalEl = document.getElementById("tabBtnJournal");
+  const viewInfoEl = document.getElementById("viewInfo");
+  const viewJournalEl = document.getElementById("viewJournal");
+  let journalHistoryLoaded = false;
+
+  function setTopTab(tab) {
+    const isInfo = tab === "info";
+    tabBtnInfoEl.classList.toggle("active", isInfo);
+    tabBtnJournalEl.classList.toggle("active", !isInfo);
+    tabBtnInfoEl.setAttribute("aria-selected", String(isInfo));
+    tabBtnJournalEl.setAttribute("aria-selected", String(!isInfo));
+    viewInfoEl.style.display = isInfo ? "block" : "none";
+    viewJournalEl.style.display = isInfo ? "none" : "block";
+    if (!isInfo && !journalHistoryLoaded) {
+      journalHistoryLoaded = true;
+      loadJournalHistory();
+    }
+  }
+  tabBtnInfoEl.addEventListener("click", () => setTopTab("info"));
+  tabBtnJournalEl.addEventListener("click", () => setTopTab("journal"));
+
+  // ---- ジャーナル面談 ----
+  // 面談そのものはGeminiアプリ(Gemini Live+Gem)側で行う。ここが担当するのは
+  // (1)Gem設定用プロンプトの提供、(2)面談後トランスクリプトの貼り付け保存、
+  // (3)過去記録の一覧表示のみ(AIによる要約・構造化はしない、CVB-002参照)。
+  const GEM_PROMPT_TEXT = `あなたは「1日の振り返り面談」を担当するAIです。ユーザーと音声で自然に会話してください。
+
+## 進め方
+1. まず今日あった出来事を、決まった質問を1つずつ聞きながら振り返る(一度に複数質問しない、1つ答えが返ってきたら次へ)。
+   決まった質問:
+   - 今日できたことは?(できたことについて、良かった点・悪かった点の両方を聞く)
+   - 今日できなかったことは?(できなかったことについて、良かった点・悪かった点の両方を聞く)
+   - 明日の目標は?
+2. 決まった質問が終わったら、そのまま自然に雑談・相談へ移ってよい。ユーザーが話したい話題があればそちらを優先する。
+3. 相談・質問された内容には、添付されているナレッジ(参考ファイル)があればそれを踏まえて答える。ナレッジに無い最新情報が必要な場合は検索して確認し、不確かなことは「確認できていません」と正直に伝える。推測で断定しない。
+
+## 聞き方のルール
+- 「できたこと」「できなかったこと」それぞれについて、良かった点・悪かった点の両方を必ず言ってもらう(片方しか出てこなければ、もう片方も聞く)。
+  例:「できなかったこと」に対しても、単に悪い面だけでなく「その中で良かった面(気づけた、途中まではできた等)」も聞く。
+- 答えが曖昧・抽象的だと感じたら、そこで終わらせず「具体的には?」「例えば?」のように深掘りする。
+- 「悪かった点・できなかったこと」が出てきたら、必ずその対策(次どうするか)まで聞く。指摘して終わりにしない。
+- 話していて落ち込んでいる・元気がないと感じたら、指摘や深掘りより先に励ましの言葉をかける(無理に前向きな結論へ誘導はしない、まず気持ちを受け止める)。
+
+## 話し方
+- フランクに、友達と話すような口調で接する(敬語・丁寧語は基本使わない)。
+- 相手の話を遮らず、相槌や短い共感を挟みながら、聞き役中心で進める。
+- 1回の発言は長すぎないようにする(講義調にならないように)。
+
+## やらないこと
+- 会話の途中や最後に、内容を勝手に要約・まとめようとしない(記録は会話終了後の文字起こしで別途行うため、要約は不要)。
+- 決めつけ・説教めいた助言をしない。`;
+
+  const gemPromptEl = document.getElementById("gem-prompt");
+  const copyGemPromptBtn = document.getElementById("copy-gem-prompt-btn");
+  const journalDateEl = document.getElementById("journal-date");
+  const journalTranscriptEl = document.getElementById("journal-transcript");
+  const saveJournalBtn = document.getElementById("save-journal-btn");
+  const journalStatusEl = document.getElementById("journal-status");
+  const journalListEl = document.getElementById("journal-list");
+  const journalEmptyEl = document.getElementById("journal-empty");
+
+  gemPromptEl.value = GEM_PROMPT_TEXT;
+  copyGemPromptBtn.addEventListener("click", () => copyToClipboard(GEM_PROMPT_TEXT, copyGemPromptBtn));
+
+  function todayLocalISODate() {
+    const d = new Date();
+    const tzOffsetMs = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - tzOffsetMs).toISOString().slice(0, 10);
+  }
+  journalDateEl.value = todayLocalISODate();
+
+  function renderJournalList(entries) {
+    journalListEl.innerHTML = "";
+    const sorted = (entries || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    journalEmptyEl.style.display = sorted.length ? "none" : "block";
+    journalEmptyEl.textContent = "まだ記録がありません。";
+    sorted.forEach((entry) => {
+      const card = document.createElement("div");
+      card.className = "task-card";
+      const head = document.createElement("div");
+      head.className = "task-card-head";
+      head.textContent = entry.date || "(日付不明)";
+      const body = document.createElement("div");
+      body.className = "task-summary journal-card-body";
+      body.textContent = entry.rawTranscript || "";
+      body.title = "タップで全文表示/折りたたみ";
+      body.addEventListener("click", () => body.classList.toggle("expanded"));
+      card.appendChild(head);
+      card.appendChild(body);
+      journalListEl.appendChild(card);
+    });
+  }
+
+  async function loadJournalHistory() {
+    try {
+      const res = await fetch(`data/journal.json?t=${Date.now()}`, { cache: "no-store" });
+      if (!res.ok) {
+        renderJournalList([]);
+        return;
+      }
+      const data = await res.json();
+      renderJournalList(data.entries || []);
+    } catch (e) {
+      journalListEl.innerHTML = "";
+      journalEmptyEl.style.display = "block";
+      journalEmptyEl.textContent = "取得に失敗しました: " + e.message;
+    }
+  }
+
+  saveJournalBtn.addEventListener("click", async () => {
+    const transcript = journalTranscriptEl.value.trim();
+    if (!transcript) {
+      journalStatusEl.textContent = "貼り付け内容が空です";
+      return;
+    }
+    const entry = {
+      id: `${Date.now()}`,
+      date: journalDateEl.value || todayLocalISODate(),
+      rawTranscript: transcript,
+      createdAt: Date.now(),
+      analyzed: false,
+    };
+    journalStatusEl.textContent = "保存中…";
+    try {
+      const res = await fetch(CVB_GAS_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "saveJournal", entry }),
+      });
+      const json = await res.json();
+      if (json.status === "ok") {
+        journalStatusEl.textContent = "保存しました";
+        journalTranscriptEl.value = "";
+        journalHistoryLoaded = true;
+        loadJournalHistory();
+      } else {
+        journalStatusEl.textContent = "保存エラー: " + (json.message || "不明なエラー");
+      }
+    } catch (e) {
+      journalStatusEl.textContent = "通信エラー(保存失敗): " + e.message;
+    }
   });
 </script>
 </body>

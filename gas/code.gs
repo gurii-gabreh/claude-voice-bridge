@@ -30,6 +30,14 @@
  *    saveKnowledgeとの違い)。この「生データの集約(JSONデータ1)」を、別途
  *    週次のRoutineがAIで読み込んで判断し、data/weekly-digest.json(JSONデータ2)へ
  *    要約結果を書き込む、という3段構成の2段目にあたる。
+ * 4. saveJournal: 2026-09-27追加(CVB-002「ジャーナル面談」機能)。Gemini Liveアプリ
+ *    での音声面談終了後、ユーザーが自動保存されたトランスクリプトをコピーして
+ *    貼り付けた1回分を、data/journal.jsonのentries配列へ1件だけ追記する
+ *    (saveKnowledgeと同じ、1件ずつ追記するパターン)。この時点ではAIによる
+ *    要約・構造化はせず生のトランスクリプトをそのまま保存する(ユーザー指示
+ *    「変にまとめてほしくない」)。傾向データ化(良かった点・悪かった点の抽出等)
+ *    は将来、room-log→weekly-digestと同じ「生ログ集約→別途AIが要約」の2段構成で
+ *    別のRoutine/スキルを追加する想定(このGASの役割はあくまで生データの保存まで)。
  *
  * ---- デプロイ手順 ----
  * 1. https://script.google.com で新規プロジェクトを作成し、このファイルの内容を貼る。
@@ -49,6 +57,7 @@ const GITHUB_API = 'https://api.github.com';
 const TRACKER_PATH = 'data/tracker.json';
 const KNOWLEDGE_LOG_PATH = 'data/knowledge-log.json';
 const ROOM_LOG_PATH = 'data/room-log.json';
+const JOURNAL_PATH = 'data/journal.json';
 
 function getConfig_() {
   const p = PropertiesService.getScriptProperties();
@@ -166,6 +175,20 @@ function saveRoomLog_(entries) {
   });
 }
 
+// Gemini Live終了後のトランスクリプト貼り付け1件を、data/journal.jsonの
+// entries配列へ追記する(saveKnowledge_と同じ、AIによる要約はせず生データのまま)。
+function saveJournal_(entry) {
+  return withRetry_(() => {
+    const { sha, data } = ghGetJson_(JOURNAL_PATH);
+    const journal = data || { entries: [] };
+    journal.entries = journal.entries || [];
+    const idx = journal.entries.findIndex((e) => e.id === entry.id);
+    if (idx >= 0) journal.entries[idx] = entry; // 同じidの再送(通信リトライ等)は上書き
+    else journal.entries.push(entry);
+    ghPut_(JOURNAL_PATH, journal, sha, `journal: ${entry.date || entry.id}`);
+  });
+}
+
 function doPost(e) {
   let result = { status: 'error', message: 'unknown action' };
   try {
@@ -178,6 +201,9 @@ function doPost(e) {
       result = { status: 'ok' };
     } else if (body.action === 'saveRoomLog') {
       saveRoomLog_(body.entries || []);
+      result = { status: 'ok' };
+    } else if (body.action === 'saveJournal') {
+      saveJournal_(body.entry || {});
       result = { status: 'ok' };
     }
   } catch (err) {

@@ -225,7 +225,7 @@
     cursor: pointer;
   }
 
-  #tracker-section {
+  #tracker-section, #design-section, #journal-section {
     width: 100%;
     display: flex;
     flex-direction: column;
@@ -448,6 +448,38 @@
     font-size: 10.5px;
   }
 
+  /* 2026-09-27追加(CVB-002)、ユーザー指示「一番上にタブを作りAI開発情報一覧と
+     ジャーナル面談で分ける構成にしたい」「イメージマネージャアプリ(Knowledge-
+     Dashboard)と同じようにしたい」。見た目はKnowledge-Dashboardの上部タブ
+     (下線スタイル)をこの画面の配色に合わせて移植した。既存の#panel-tabs(一覧/
+     ボイス/基本設計)はこの新しいタブの下にもう1階層として残る。 */
+  #top-tab-row {
+    width: 100%;
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--panel-border);
+  }
+  .top-tab-btn {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 8px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .top-tab-btn:hover { color: var(--ink); }
+  .top-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  #top-view-info, #top-view-journal {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
   /* 2026-09-27追加、ユーザー指示「サイドアプリの管理方法は、右上にボタンを作り
      それをクリックしたらモーダルを出し、そこに今の折りたたみ仕様を表示させる
      ようにしろ」: 純粋に読み物な「❓使用方法」「📦タスク一覧のJSON管理方法」の
@@ -556,6 +588,17 @@
       </details>
     </div>
   </div>
+
+  <!-- 2026-09-27追加(CVB-002)、ユーザー指示「一番上にタブを作りAI開発情報一覧と
+       ジャーナル面談で分ける構成にしたい」。既存の全画面(一覧/ボイス/基本設計/
+       定例文/スキル呼び出し文言/手動セレクタ設定)は#top-view-info配下にまとめて
+       残し、新規の#top-view-journalを並べた。 -->
+  <div id="top-tab-row">
+    <button type="button" class="top-tab-btn active" id="top-tab-info">📋 AI開発情報一覧</button>
+    <button type="button" class="top-tab-btn" id="top-tab-journal">📓 ジャーナル面談</button>
+  </div>
+
+  <div id="top-view-info">
 
   <div id="panel-tabs">
     <!-- 2026-09-27変更、ユーザー指示「ボイスと一覧の位置を左右変えて、左側に一覧を設けて」 -->
@@ -689,6 +732,20 @@
     <label>メッセージブロックのCSSセレクタ</label>
     <input type="text" id="sel-message" placeholder="例: [data-testid=message]">
   </details>
+
+  </div><!-- /#top-view-info -->
+
+  <!-- 2026-09-27追加(CVB-002)。中身はwidget-journal.htmlへ切り出し、他のウィジェット
+       (widget-tasks.html等)と同じくiframeで呼び出すだけにした。GASへの保存POSTも
+       ウィジェット単体で完結する(host側のpendingAuditRequestのような排他制御を
+       必要としないため、hostに残さずウィジェット側に持たせた)。 -->
+  <div id="top-view-journal" style="display:none;">
+    <div id="journal-section">
+      <div class="section-eyebrow">ジャーナル面談</div>
+      <div class="section-title">📓 AIと音声で1日を振り返る</div>
+      <iframe id="journal-widget-frame" class="widget-frame" src="widget-journal.html" title="ジャーナル面談"></iframe>
+    </div>
+  </div>
 
   <script src="tracker-store.js"></script>
   <script src="room-log-store.js"></script>
