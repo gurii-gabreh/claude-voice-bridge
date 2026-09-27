@@ -450,6 +450,16 @@
     <button class="panel-tab active" id="panel-tab-voice" type="button">🎙️ ボイス</button>
   </div>
 
+  <!-- 2026-09-27変更、ユーザー指示「タスク更新ボタンは処理ログの上に表示にして」:
+       一覧モードでのみ使うボタン列だが、表示位置は処理ログより上にしたいとの指示のため
+       #list-mode-panelの外(共通領域)へ出した。一覧モードの時だけ表示されるよう、
+       sidepanel.jsのsetPanelMode()側でdisplayを切り替える。 -->
+  <div id="action-row" style="display:none;">
+    <button id="extract-room-btn" type="button" title="ルームの抽出→GitHubへ同期→GitHubから読み込みを、1ステップずつボタンで進めます">🔍 タスク一覧を抽出</button>
+    <button id="sync-github-btn" type="button" hidden>☁️ タスク一覧→JSONへ同期</button>
+    <button id="load-tracker-json-btn" type="button" hidden title="タスク一覧と定例文の両方を、GitHub上の最新内容に更新します">📥 JSONから一覧を読み込む</button>
+  </div>
+
   <!-- 2026-09-13不具合修正: 以前は#statusが#voice-mode-panel内にあり、一覧モード
        タブ(#list-mode-panel)を表示中はvoice-mode-panelごとdisplay:noneになるため、
        一覧モードのボタン(GitHub同期・JSONから読み込む等)を押した結果のステータス
@@ -499,11 +509,6 @@
         <p>「🔍 抽出」を押すと、AIがこのルームを直接読み返し、未解決の相談・未完了の作業を一覧化します(通常の会話ターンが1往復増えます)。</p>
       </div>
     </details>
-    <div id="action-row">
-      <button id="extract-room-btn" type="button" title="ルームの抽出→GitHubへ同期→GitHubから読み込み、を続けて実行します">🔄 タスク一覧を更新</button>
-      <button id="sync-github-btn" type="button" hidden>☁️ タスク一覧→JSONへ同期</button>
-      <button id="load-tracker-json-btn" type="button" hidden title="タスク一覧と定例文の両方を、GitHub上の最新内容に更新します">📥 JSONから一覧を読み込む</button>
-    </div>
     <div id="tracker-section">
       <div id="tracker-section-label">AI開発情報一覧</div>
       <div class="section-title">📋 未解決の相談・進行中のタスク(見逃し防止)</div>
@@ -516,7 +521,7 @@
       <summary class="collapsible-summary">📦 タスク一覧のJSON管理方法</summary>
       <div class="collapsible-body">
         <p>タスク一覧(未解決の相談・作業)は、PC版(この拡張機能)とモバイル版(Web版)の両方から更新でき、どちらも同じGitHub上の<code>data/tracker.json</code>を共有しています。</p>
-        <p><strong>PC版</strong>: 「🔄 タスク一覧を更新」を押すと、room-task-auditスキルによるルーム抽出→GitHubへの同期(☁️)→GitHubからの再読み込み(📥)を1つのボタンで続けて実行します(2026-09-26変更、以前は3ボタンに分かれていた処理を数珠つなぎ化)。</p>
+        <p><strong>PC版</strong>: 「🔍 タスク一覧を抽出」→「☁️ タスク一覧→JSONへ同期」→「📥 JSONから一覧を読み込む」の順に、1ステップずつボタンを押して進めます(押すたびに次のステップのボタンへ切り替わり、全て終わると最初の抽出ボタンに戻ります)。2026-09-27変更、AIの応答完了判定が長い応答の途中で誤って完了と判定した場合に、まだ生成中の内容のまま同期・読込まで進んでしまう不具合があったため(以前の2026-09-26変更で1ボタンに自動連結していたのを差し戻した)、各ステップの間でユーザーが画面上の内容を確認してから次に進める方式に戻した。</p>
         <p><strong>モバイル版</strong>: claude.aiで直接room-task-auditを呼び出し、その回答をモバイル版ページに貼り付けると、PC版と同じ「その時点の未解決タスク全部」で置き換わります。同期ボタンも同じ仕組みです。</p>
         <p><strong>重複・競合</strong>: どちらも「丸ごと置き換え」方式のため重複登録はされません。ただしPC・モバイルが別々の内容を持ったまま両方同期すると、後から同期した方が前の内容を完全に上書きします(マージはしない仕様、2026-09-19確認済み)。</p>
         <p><strong>生ログとの違い</strong>: 上記のtracker.jsonとは別に、会話の生ログは<code>room-log.json</code>/<code>knowledge-log.json</code>へ「前回から増えた分だけ」を差分方式で蓄積し、週次Routineがそのうち前回処理した時点より新しい分だけをAIが判断して<code>weekly-digest.json</code>(傾向分析用の永続ナレッジ)へ要約を追記します。</p>

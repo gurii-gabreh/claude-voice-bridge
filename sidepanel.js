@@ -30,6 +30,7 @@
   const panelTabListBtn = document.getElementById("panel-tab-list");
   const voiceModePanelEl = document.getElementById("voice-mode-panel");
   const listModePanelEl = document.getElementById("list-mode-panel");
+  const actionRowEl = document.getElementById("action-row");
   const rateSliderEl = document.getElementById("rate-slider");
   const rateValueEl = document.getElementById("rate-value");
   const voiceSelectEl = document.getElementById("voice-select");
@@ -81,6 +82,10 @@
     panelTabListBtn.classList.toggle("active", !isVoice);
     voiceModePanelEl.style.display = isVoice ? "flex" : "none";
     listModePanelEl.style.display = isVoice ? "none" : "flex";
+    // 2026-09-27変更、ユーザー指示「タスク更新ボタンは処理ログの上に表示にして」:
+    // #action-rowを#list-mode-panelの外(処理ログより上の共通領域)へ移したため、
+    // 表示/非表示はここで一覧モードかどうかに応じて切り替える。
+    actionRowEl.style.display = isVoice ? "none" : "flex";
     chrome.storage.local.set({ cvb_panel_mode: panel });
   }
   panelTabVoiceBtn.addEventListener("click", () => setPanelMode("voice"));
@@ -182,26 +187,40 @@
     return items;
   }
 
-  // 2026-09-26変更: 抽出が終わったら、そのままGitHubへの同期(☁️)→GitHubからの
-  // 読み込み(📥)まで数珠つなぎに続けて実行する(ユーザー指示「3つボタンを押すから、
-  // 1つ終わったら次を呼び出すように」)。同期に失敗した場合は読み込みへは進まない
-  // (古い/矛盾したJSONをそのまま読み込んでしまうため)。
+  // 2026-09-27変更、ユーザー指摘「タスク一覧を更新ボタンを押した後の履歴取得部分が
+  // 早すぎてAIが回答中に取得処理している」への対応。
+  // 経緯: 2026-09-26に「抽出→同期→読込を自動で数珠つなぎにする」方式にしたが、
+  // AIの応答完了判定(README既知の制約、「新しい応答ブロックが現れてから700ms間
+  // 画面に変化が無ければ完了とみなす」という簡易的な仕組み)が、長い応答の途中で
+  // 誤って完了と判定してしまうと、まだ生成中の不完全な内容のまま同期・読込まで
+  // 自動で進んでしまう(=履歴取得が「AIの回答中」に走ってしまう)不具合があった。
+  // 自動連続実行をやめ、1ステップずつボタンを押して進める方式に戻すことで、
+  // ユーザーが画面上の抽出結果を目で確認してから次のステップへ進めるようにし、
+  // このrace conditionを回避する(showUpdateStep()参照)。
   async function handleAuditResponse(text, source) {
     const items = parseAuditResponse(text);
     if (items === null) {
-      setStatus("監査結果の解析に失敗しました(想定した形式で応答されませんでした)", "error");
+      setStatus("監査結果の解析に失敗しました(想定した形式で応答されませんでした)。もう一度「🔍 タスク一覧を抽出」を押してください", "error");
+      showUpdateStep("extract");
       return;
     }
     window.TrackerStore.setItems(items, source);
     if (items.length > 0) {
-      setStatus(`${SITE_LABELS[mode]}: 未解決の項目を${items.length}件検出しました。GitHubへ同期しています…`);
+      setStatus(`${SITE_LABELS[mode]}: 未解決の項目を${items.length}件検出しました。内容を確認し、次は「☁️ タスク一覧→JSONへ同期」を押してください`);
     } else {
-      setStatus(`${SITE_LABELS[mode]}: 未解決の項目はありませんでした。GitHubへ同期しています…`);
+      setStatus(`${SITE_LABELS[mode]}: 未解決の項目はありませんでした。次は「☁️ タスク一覧→JSONへ同期」を押してください`);
     }
-    const synced = await syncTrackerToGithub();
-    if (synced) {
-      await loadTrackerJsonAndTemplates();
-    }
+    showUpdateStep("sync");
+  }
+
+  // 2026-09-27追加: 抽出→同期→読込の3ステップのうち、今どれを表示すべきかを切り替える。
+  // 全て終わったら最初の抽出ボタンへ戻る(ユーザー指示「すべて終わったら最初の
+  // 抽出ボタンを表示して」)。stepにnullを渡すと、AIの応答待ち中など「今どのボタンも
+  // 押せるべきではない」間、3つとも非表示にする。
+  function showUpdateStep(step) {
+    extractRoomBtn.hidden = step !== "extract";
+    syncGithubBtn.hidden = step !== "sync";
+    loadTrackerJsonBtn.hidden = step !== "load";
   }
 
   // 「🔍 ルームタスク一覧を抽出」ボタン: 2つの処理を行う。
@@ -230,11 +249,15 @@
 
     // (2) AIへ直接確認を依頼
     pendingAuditRequest = true;
-    setStatus(`${SITE_LABELS[mode]}: ルームを確認中…(AIへ問い合わせています)`);
+    // 2026-09-27変更: 応答待ちの間はどのステップのボタンも押せないようにする
+    // (二重送信・早すぎるステップ進行の防止)。次に何が起きるかを状態文言で示す。
+    showUpdateStep(null);
+    setStatus(`${SITE_LABELS[mode]}: ルームを確認中…(AIへ問い合わせています。回答が完了したら「☁️ 同期」へ進めます)`);
     try {
       const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-send-text", text: AUDIT_TRIGGER_TEXT });
       if (!res || !res.ok) {
         pendingAuditRequest = false;
+        showUpdateStep("extract");
         if (res && res.reason === "busy") {
           // ボイスモードが会話中(応答待ち)の場合、監査を同時に送ると応答を取り違える
           // ため送信自体を見送っている(2026-09-13追加、content.jsのsendInFlightガード)。
@@ -246,6 +269,7 @@
       // res.ok===trueの場合、結果はcvb-response-ready(onMessageリスナー)で処理される
     } catch (e) {
       pendingAuditRequest = false;
+      showUpdateStep("extract");
       setStatus(`${SITE_LABELS[mode]}のタブをリロードしてください(拡張機能更新後は毎回タブの再読み込みが必要です)`, "error");
     }
   });
@@ -254,10 +278,10 @@
   // その時点のトラッカー全体をdata/tracker.json(claude-voice-bridgeリポジトリ)へ
   // 上書き保存する。自動同期はしない(常時監視で頻繁に更新されるたびcommitすると
   // 履歴が大量になるため)。2026-09-13追加、ユーザー指示。
-  // 2026-09-26変更: 「☁️ タスク一覧→JSONへ同期」ボタン単体は非表示にし、
-  // 「🔍 ルームタスク一覧を抽出」(抽出→同期→読み込みへ改称)の一連の処理から
-  // 呼び出す関数として切り出した(ユーザー指示「3つボタンを押すから数珠つなぎに」)。
-  // 戻り値はチェーンの続行判定用(true=成功)。
+  // 2026-09-27変更、ユーザー指摘「更新ボタンを押した後の履歴取得部分が早すぎて
+  // AIが回答中に取得処理している」への対応で、抽出→同期→読込の自動連続実行を
+  // やめ、1ステップずつボタンを押して進める方式に戻した。この関数自体は
+  // syncGithubBtnのクリックからのみ呼ばれる(戻り値は次のステップへ進めるかの判定用)。
   async function syncTrackerToGithub() {
     if (!CVB_GAS_URL) {
       setStatus("GitHub同期は未設定です(gas/README.mdの手順でデプロイしてください)", "error");
@@ -271,17 +295,21 @@
       });
       const json = await res.json();
       if (json.status === "ok") {
-        setStatus("GitHubへ同期しました");
+        setStatus("GitHubへ同期しました。次は「📥 JSONから一覧を読み込む」を押してください");
         return true;
       }
-      setStatus(`GitHub同期エラー: ${json.message || "不明なエラー"}`, "error");
+      setStatus(`GitHub同期エラー: ${json.message || "不明なエラー"}(もう一度「☁️ タスク一覧→JSONへ同期」を押してください)`, "error");
       return false;
     } catch (e) {
-      setStatus("GitHub同期エラー(通信失敗)", "error");
+      setStatus("GitHub同期エラー(通信失敗。もう一度「☁️ タスク一覧→JSONへ同期」を押してください)", "error");
       return false;
     }
   }
-  syncGithubBtn.addEventListener("click", syncTrackerToGithub);
+  syncGithubBtn.addEventListener("click", async () => {
+    const ok = await syncTrackerToGithub();
+    if (ok) showUpdateStep("load");
+    // 失敗時はsyncGithubBtnを表示したままにし、再試行できるようにする。
+  });
 
   // 「📥 JSONから一覧を読み込む」処理: 2026-09-13追加、ユーザー指示。
   // 経緯: ブラウザ側の自動抽出(ページのDOM構造を推測して応答を捕まえる仕組み)は
@@ -355,11 +383,18 @@
       console.log("[cvb-panel] 定例文JSONの読み込みに失敗:", e);
     }
     setStatus(
-      `GitHub上のJSONから読み込みました(未完了${trackerCount}件${templatesUpdated ? "、定例文も更新" : ""})`
+      `GitHub上のJSONから読み込みました(未完了${trackerCount}件${templatesUpdated ? "、定例文も更新" : ""})。更新が完了しました`
     );
     return true;
   }
-  loadTrackerJsonBtn.addEventListener("click", loadTrackerJsonAndTemplates);
+  loadTrackerJsonBtn.addEventListener("click", async () => {
+    await loadTrackerJsonAndTemplates();
+    // 2026-09-27変更、ユーザー指示「すべて終わったら最初の抽出ボタンを表示して」:
+    // 成功・失敗どちらの場合も一連の更新はここで区切りとし、最初の抽出ボタンへ戻す
+    // (失敗時に「📥」ボタンだけ表示し続けても、原因(通信エラー等)は再抽出しても
+    // 変わらないことが多いため、ユーザーが状況を見て自分で「🔍」からやり直せるようにする)。
+    showUpdateStep("extract");
+  });
 
   // テンプレートは { label, text } の配列。textは複数行の長文も可。
   // エディタ上では "---" だけの行で区切り、各ブロックの1行目をlabel、
@@ -1036,6 +1071,7 @@
     if (stored.cvb_mode === "claude" || stored.cvb_mode === "gemini") mode = stored.cvb_mode;
     updateModeUI();
     setPanelMode(stored.cvb_panel_mode === "list" ? "list" : "voice");
+    showUpdateStep("extract"); // 起動時は常に最初のステップから
 
     // 2026-09-27変更: このページ自体はもうタスク一覧を描画しない(widget-tasks.html側の
     // 役目)が、syncTrackerToGithub()がgetData()で最新のトラッカーをGitHubへ送るため、
