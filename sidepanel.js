@@ -34,9 +34,31 @@
   const rateSliderEl = document.getElementById("rate-slider");
   const rateValueEl = document.getElementById("rate-value");
   const voiceSelectEl = document.getElementById("voice-select");
+  const infoModalBtn = document.getElementById("info-modal-btn");
+  const infoModalOverlayEl = document.getElementById("info-modal-overlay");
+  const infoModalCloseBtn = document.getElementById("info-modal-close");
 
   micPermissionBtn.addEventListener("click", () => {
     chrome.tabs.create({ url: chrome.runtime.getURL("permission.html") });
+  });
+
+  // ---- 使用方法・JSON管理方法モーダル ----
+  // 2026-09-27追加、ユーザー指示「サイドアプリの管理方法は、右上にボタンを作り
+  // それをクリックしたらモーダルを出し、そこに今の折りたたみ仕様を表示させる
+  // ようにしろ」。純粋な読み物系(❓使用方法・📦タスク一覧のJSON管理方法)のみ対象。
+  function openInfoModal() {
+    infoModalOverlayEl.classList.add("open");
+  }
+  function closeInfoModal() {
+    infoModalOverlayEl.classList.remove("open");
+  }
+  infoModalBtn.addEventListener("click", openInfoModal);
+  infoModalCloseBtn.addEventListener("click", closeInfoModal);
+  infoModalOverlayEl.addEventListener("click", (e) => {
+    if (e.target === infoModalOverlayEl) closeInfoModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && infoModalOverlayEl.classList.contains("open")) closeInfoModal();
   });
 
   // ---- 対象AI(claude / gemini)のモード管理 ----

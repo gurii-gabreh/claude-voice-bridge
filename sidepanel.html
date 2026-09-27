@@ -447,6 +447,72 @@
     border-radius: 3px;
     font-size: 10.5px;
   }
+
+  /* 2026-09-27追加、ユーザー指示「サイドアプリの管理方法は、右上にボタンを作り
+     それをクリックしたらモーダルを出し、そこに今の折りたたみ仕様を表示させる
+     ようにしろ」: 純粋に読み物な「❓使用方法」「📦タスク一覧のJSON管理方法」の
+     2つだけをモーダルへ移動(📌定例文・🔧スキル呼び出し文言は操作ウィジェットを
+     含むため画面上に残す)。AskUserQuestionでの確認: 「情報系の2つのみ」を選択。 */
+  #header-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  #info-modal-btn {
+    font-size: 13px;
+    line-height: 1;
+    padding: 5px 7px;
+    background: var(--surface);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  #info-modal-btn:hover { color: var(--accent); border-color: var(--accent); }
+  #info-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px 14px;
+    overflow-y: auto;
+  }
+  #info-modal-overlay.open { display: flex; }
+  #info-modal {
+    width: 100%;
+    max-width: 340px;
+    background: var(--bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  #info-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  #info-modal-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  #info-modal-close {
+    font-size: 12px;
+    padding: 4px 9px;
+    background: var(--surface);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  #info-modal-close:hover { color: var(--accent); border-color: var(--accent); }
+  #info-modal .collapsible-block:last-child { margin-bottom: 0; }
+
   input[type="text"] {
     width: 100%;
     margin-top: 6px;
@@ -461,7 +527,35 @@
 </head>
 <body>
 
-  <div id="hud-title">AI開発情報一覧</div>
+  <div id="header-row">
+    <div id="hud-title">AI開発情報一覧</div>
+    <button id="info-modal-btn" type="button" title="使用方法・タスク一覧のJSON管理方法">ℹ️</button>
+  </div>
+
+  <div id="info-modal-overlay">
+    <div id="info-modal">
+      <div id="info-modal-head">
+        <div id="info-modal-title">使用方法・管理方法</div>
+        <button id="info-modal-close" type="button">閉じる ✕</button>
+      </div>
+      <details class="collapsible-block">
+        <summary class="collapsible-summary">❓ 使用方法</summary>
+        <div class="collapsible-body">
+          <p>「🔍 抽出」を押すと、AIがこのルームを直接読み返し、未解決の相談・未完了の作業を一覧化します(通常の会話ターンが1往復増えます)。</p>
+        </div>
+      </details>
+      <details class="collapsible-block">
+        <summary class="collapsible-summary">📦 タスク一覧のJSON管理方法</summary>
+        <div class="collapsible-body">
+          <p>タスク一覧(未解決の相談・作業)は、PC版(この拡張機能)とモバイル版(Web版)の両方から更新でき、どちらも同じGitHub上の<code>data/tracker.json</code>を共有しています。</p>
+          <p><strong>PC版</strong>: 「🔍 タスク一覧を抽出」→「☁️ タスク一覧→JSONへ同期」→「📥 JSONから一覧を読み込む」の順に、1ステップずつボタンを押して進めます(押すたびに次のステップのボタンへ切り替わり、全て終わると最初の抽出ボタンに戻ります)。2026-09-27変更、AIの応答完了判定が長い応答の途中で誤って完了と判定した場合に、まだ生成中の内容のまま同期・読込まで進んでしまう不具合があったため(以前の2026-09-26変更で1ボタンに自動連結していたのを差し戻した)、各ステップの間でユーザーが画面上の内容を確認してから次に進める方式に戻した。</p>
+          <p><strong>モバイル版</strong>: claude.aiで直接room-task-auditを呼び出し、その回答をモバイル版ページに貼り付けると、PC版と同じ「その時点の未解決タスク全部」で置き換わります。同期ボタンも同じ仕組みです。</p>
+          <p><strong>重複・競合</strong>: どちらも「丸ごと置き換え」方式のため重複登録はされません。ただしPC・モバイルが別々の内容を持ったまま両方同期すると、後から同期した方が前の内容を完全に上書きします(マージはしない仕様、2026-09-19確認済み)。</p>
+          <p><strong>生ログとの違い</strong>: 上記のtracker.jsonとは別に、会話の生ログは<code>room-log.json</code>/<code>knowledge-log.json</code>へ「前回から増えた分だけ」を差分方式で蓄積し、週次Routineがそのうち前回処理した時点より新しい分だけをAIが判断して<code>weekly-digest.json</code>(傾向分析用の永続ナレッジ)へ要約を追記します。</p>
+        </div>
+      </details>
+    </div>
+  </div>
 
   <div id="panel-tabs">
     <!-- 2026-09-27変更、ユーザー指示「ボイスと一覧の位置を左右変えて、左側に一覧を設けて」 -->
@@ -526,12 +620,10 @@
   </div>
 
   <div id="list-mode-panel">
-    <details class="collapsible-block">
-      <summary class="collapsible-summary">❓ 使用方法</summary>
-      <div class="collapsible-body">
-        <p>「🔍 抽出」を押すと、AIがこのルームを直接読み返し、未解決の相談・未完了の作業を一覧化します(通常の会話ターンが1往復増えます)。</p>
-      </div>
-    </details>
+    <!-- 2026-09-27変更、ユーザー指示「管理方法は右上のボタンからモーダルで表示」:
+         「❓使用方法」「📦タスク一覧のJSON管理方法」の純粋な読み物2つは#info-modal
+         (header-row内のℹ️ボタン)へ移動した。実際の操作ウィジェットを含む
+         #tracker-sectionはここに残る。 -->
     <div id="tracker-section">
       <div id="tracker-section-label">AI開発情報一覧</div>
       <div class="section-title">📋 未解決の相談・進行中のタスク(見逃し防止)</div>
@@ -540,16 +632,6 @@
            呼び出すだけにした。抽出トリガー(action-row)はこれまで通りこのページ側に残す。 -->
       <iframe id="tasks-widget-frame" class="widget-frame" src="widget-tasks.html" title="タスク一覧"></iframe>
     </div>
-    <details class="collapsible-block">
-      <summary class="collapsible-summary">📦 タスク一覧のJSON管理方法</summary>
-      <div class="collapsible-body">
-        <p>タスク一覧(未解決の相談・作業)は、PC版(この拡張機能)とモバイル版(Web版)の両方から更新でき、どちらも同じGitHub上の<code>data/tracker.json</code>を共有しています。</p>
-        <p><strong>PC版</strong>: 「🔍 タスク一覧を抽出」→「☁️ タスク一覧→JSONへ同期」→「📥 JSONから一覧を読み込む」の順に、1ステップずつボタンを押して進めます(押すたびに次のステップのボタンへ切り替わり、全て終わると最初の抽出ボタンに戻ります)。2026-09-27変更、AIの応答完了判定が長い応答の途中で誤って完了と判定した場合に、まだ生成中の内容のまま同期・読込まで進んでしまう不具合があったため(以前の2026-09-26変更で1ボタンに自動連結していたのを差し戻した)、各ステップの間でユーザーが画面上の内容を確認してから次に進める方式に戻した。</p>
-        <p><strong>モバイル版</strong>: claude.aiで直接room-task-auditを呼び出し、その回答をモバイル版ページに貼り付けると、PC版と同じ「その時点の未解決タスク全部」で置き換わります。同期ボタンも同じ仕組みです。</p>
-        <p><strong>重複・競合</strong>: どちらも「丸ごと置き換え」方式のため重複登録はされません。ただしPC・モバイルが別々の内容を持ったまま両方同期すると、後から同期した方が前の内容を完全に上書きします(マージはしない仕様、2026-09-19確認済み)。</p>
-        <p><strong>生ログとの違い</strong>: 上記のtracker.jsonとは別に、会話の生ログは<code>room-log.json</code>/<code>knowledge-log.json</code>へ「前回から増えた分だけ」を差分方式で蓄積し、週次Routineがそのうち前回処理した時点より新しい分だけをAIが判断して<code>weekly-digest.json</code>(傾向分析用の永続ナレッジ)へ要約を追記します。</p>
-      </div>
-    </details>
   </div>
 
   <div id="phrases-section">
