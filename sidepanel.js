@@ -217,7 +217,13 @@
   // 全て終わったら最初の抽出ボタンへ戻る(ユーザー指示「すべて終わったら最初の
   // 抽出ボタンを表示して」)。
   function showUpdateStep(step) {
-    extractRoomBtn.hidden = step !== "extract";
+    // 2026-09-27変更、ユーザー指摘「AIが回答作成中で抽出できなかったら、抽出だけ
+    // するボタンを設けて」への対応。以前は同期・読込ステップの間、抽出ボタンを
+    // 隠していたため、抽出がうまくいかなかった(例: 送信は成功したがAIが別の
+    // 回答作成中だった等)ことに気づいても、その場で再抽出できなかった。
+    // 「🔍 タスク一覧を抽出」は常に表示し、いつでも押し直せるようにする(押すと
+    // 同期・読込ボタンは一旦隠れ、同期ステップから仕切り直しになる)。
+    extractRoomBtn.hidden = false;
     syncGithubBtn.hidden = step !== "sync";
     loadTrackerJsonBtn.hidden = step !== "load";
   }
