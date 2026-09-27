@@ -149,6 +149,16 @@
         "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
       "text": "Good, already on the designated branch.\nNo drift. Committing.\nNow merge into main per rule 25.\nNow let's switch back to the designated branch (per the workflow convention) and finish the claude-voice-bridge side (templates.json commit/push).\nNo conflict. Committing templates.json and merging remote.\nnew-app-kickoffスキル、実装・push・main反映まで完了しました。固定フレーズ: 【新規アプリ構想】new-app-kickoffスキルを呼び出して実行してください。手順: ①基本設定(claude-core-rules.md)・調査ナレッジ(concept-log.json)・実績ナレッジ(tasks.json)を確認 → ②リポジトリ無しの専用新規ルームをcreate_sessionで作成 → ③構想(要件・機能・技術選定など)はそのルームに引き継ぎ、manager-room自身は中身に踏み込まないprogress-tracker-dashboard: .claude/skills/new-app-kickoff/SKILL.md作成、data/ai-config.json(web/ai両方)へ登録、data/concept-log.jsonにCL-026として設計判断を記録。designated branch→main マージ・push済みclaude-voice-bridge: data/templates.jsonの「🔧 スキル呼び出し文言」に「新規アプリの構想を始める」ボタンを追加、push済みご確認いただいた通り、呼び出しは固定フレーズのみ(誤発火防止)、新規ルームはリポジトリ未紐付けで開始する仕様です。"
+    },
+    {
+      "id": "1790472307354_75jri",
+      "ts": 1790472307354,
+      "room": {
+        "mode": "claude",
+        "title": "Claude Code",
+        "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
+      },
+      "text": "「使用方法」だけでなく、同じ.collapsible-blockパターンを使っている「JSON管理方法」「定例文」「スキル呼び出し文言」も含めて全部見た目を揃えて変えるか、それとも「使用方法」だけ個別に変えるか、まず教えてください。具体的な方向性としては、今は文字とアイコン(▶)だけのシンプルな表示なので、既にタスク一覧枠(.tracker-section)で使っている「背景色+枠線+角丸」のカード風スタイルを.collapsible-blockにも適用する案を考えています(既存のデザインとの統一感を保ちつつ、視覚的に独立したブロックだと分かりやすくなります)。この方向でよいか、他にイメージがあれば教えてください。\nVerified visually — the card styling renders cleanly in both open and closed states, with proper contrast for inline code and an accent-colored border when expanded. Let me continue with the remaining widget files.\nNow let's call reportHeightToParent() from each widget's script.\nNow let's remove the unused DOM refs and functions.\nNow let's view and remove insertTextToPage and renderTemplateButtons.\nNow let's remove the entire block from line 659 to 844 (the display-only tracker section) in one edit.\nNow removing this entire block (lines 659–844) in one edit.\nNo dangling references. Now let's render the full extension visually via Playwright to confirm the widget iframes load and display correctly.\nCleaned up successfully — both test servers are down and temp files removed. Now let's finalize by validating and committing all the changes.\nNo drift. Committing.\nLet's commit this README update.\nJust automated index rebuilds, unrelated. Committing.\n【回答09/27 10:19:33】タスク一覧・定例文・スキル呼び出し文言のウィジェット化(iframe呼び出し)が完了しました。widget-tasks.html/widget-phrases.html/widget-skill-phrases.htmlを新規作成し、サイドパネル本体からはそれぞれ<iframe>で呼び出すだけの構成にしました抽出トリガー・GitHub同期・定例文の編集(音声モードとの排他制御が絡む処理)はサイドパネル本体に残しています複数ページ間のデータ同期(chrome.storage.onChanged)・iframeの高さ自動調整(postMessage)も実装済みあわせて「ボイス/一覧」タブの左右入れ替え、「使用方法」等の折りたたみのカード風デザイン統一も反映しましたPlaywrightでchrome.* APIをモックし、表示・アプリ絞り込み・❓トグル・iframe自動リサイズを検証済みです(実際のChrome拡張機能としての動作確認はまだです)claude-voice-bridgeのmainへcommit・push済み(8c2cb05, 11f5c39)。progress-tracker-dashboard側もCVB-001・CL-029に記録し、mainへマージ済みです。再度アップロード(拡張機能+タブの再読み込み)して問題ありません。なお、以前ご依頼のあった「既存12リポジトリの要件定義シート遡及作成」はスクリプト準備済みでまだ未実行のままです。次にこちらへ進めてよいか教えてください。"
     }
   ]
 }
