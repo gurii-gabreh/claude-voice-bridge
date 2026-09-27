@@ -187,36 +187,35 @@
     return items;
   }
 
-  // 2026-09-27変更、ユーザー指摘「タスク一覧を更新ボタンを押した後の履歴取得部分が
-  // 早すぎてAIが回答中に取得処理している」への対応。
-  // 経緯: 2026-09-26に「抽出→同期→読込を自動で数珠つなぎにする」方式にしたが、
-  // AIの応答完了判定(README既知の制約、「新しい応答ブロックが現れてから700ms間
-  // 画面に変化が無ければ完了とみなす」という簡易的な仕組み)が、長い応答の途中で
-  // 誤って完了と判定してしまうと、まだ生成中の不完全な内容のまま同期・読込まで
-  // 自動で進んでしまう(=履歴取得が「AIの回答中」に走ってしまう)不具合があった。
-  // 自動連続実行をやめ、1ステップずつボタンを押して進める方式に戻すことで、
-  // ユーザーが画面上の抽出結果を目で確認してから次のステップへ進めるようにし、
-  // このrace conditionを回避する(showUpdateStep()参照)。
+  // 2026-09-27変更、ユーザー指摘「次のボタンはユーザー側のタイミングで押すから
+  // 確認しなくて良い。最初のボタンを押したら、次のボタンを出すだけでいい」への対応。
+  // 経緯: 当初(2026-09-26)は抽出→同期→読込を自動で数珠つなぎにしていたが、AIの
+  // 応答完了判定(README既知の制約、700ms無変化ヒューリスティック)が長い応答の
+  // 途中で誤って完了と判定すると、まだ生成中の不完全な内容のまま同期・読込まで
+  // 自動で進んでしまう不具合があった。そこで一旦「AIの応答が実際に届いてから次の
+  // ボタンを表示する」方式にしたが、これも結局システム側が完了を判定しようとする
+  // 点は変わらず、ユーザーからは「その判定(確認)自体が要らない。ボタンを押したら
+  // 即座に次のボタンを出すだけでよく、実際にいつ押すかはユーザー自身が画面を見て
+  // 判断する」との指摘を受けた。よって、各ボタンはクリックした瞬間に次のボタンへ
+  // 切り替え、処理(AIへの問い合わせ/GitHub同期/GitHub読み込み)の完了を待たずに
+  // 進める(fire-and-forget)。処理結果は処理ログにその都度反映されるのみとする。
   async function handleAuditResponse(text, source) {
     const items = parseAuditResponse(text);
     if (items === null) {
-      setStatus("監査結果の解析に失敗しました(想定した形式で応答されませんでした)。もう一度「🔍 タスク一覧を抽出」を押してください", "error");
-      showUpdateStep("extract");
+      setStatus("監査結果の解析に失敗しました(想定した形式で応答されませんでした)", "error");
       return;
     }
     window.TrackerStore.setItems(items, source);
     if (items.length > 0) {
-      setStatus(`${SITE_LABELS[mode]}: 未解決の項目を${items.length}件検出しました。内容を確認し、次は「☁️ タスク一覧→JSONへ同期」を押してください`);
+      setStatus(`${SITE_LABELS[mode]}: 未解決の項目を${items.length}件検出しました`);
     } else {
-      setStatus(`${SITE_LABELS[mode]}: 未解決の項目はありませんでした。次は「☁️ タスク一覧→JSONへ同期」を押してください`);
+      setStatus(`${SITE_LABELS[mode]}: 未解決の項目はありませんでした`);
     }
-    showUpdateStep("sync");
   }
 
   // 2026-09-27追加: 抽出→同期→読込の3ステップのうち、今どれを表示すべきかを切り替える。
   // 全て終わったら最初の抽出ボタンへ戻る(ユーザー指示「すべて終わったら最初の
-  // 抽出ボタンを表示して」)。stepにnullを渡すと、AIの応答待ち中など「今どのボタンも
-  // 押せるべきではない」間、3つとも非表示にする。
+  // 抽出ボタンを表示して」)。
   function showUpdateStep(step) {
     extractRoomBtn.hidden = step !== "extract";
     syncGithubBtn.hidden = step !== "sync";
@@ -235,6 +234,12 @@
       return;
     }
 
+    // 2026-09-27変更、ユーザー指示: AIの応答完了を待たず、押した時点で次のボタンへ
+    // 切り替える。「タスクの回答が来たらボタンを押してください」という注意文言で、
+    // いつ押すべきかはユーザー自身の判断に委ねる。
+    showUpdateStep("sync");
+    setStatus(`${SITE_LABELS[mode]}: ルームを確認中です。タスクの回答が来たら「☁️ タスク一覧→JSONへ同期」を押してください`);
+
     // (1) 生ログ・ナレッジ化(失敗しても致命的ではないので、失敗時はwarnのみ)
     try {
       const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-extract-room-text" });
@@ -249,13 +254,11 @@
 
     // (2) AIへ直接確認を依頼
     pendingAuditRequest = true;
-    // 2026-09-27変更: 応答待ちの間はどのステップのボタンも押せないようにする
-    // (二重送信・早すぎるステップ進行の防止)。次に何が起きるかを状態文言で示す。
-    showUpdateStep(null);
-    setStatus(`${SITE_LABELS[mode]}: ルームを確認中…(AIへ問い合わせています。回答が完了したら「☁️ 同期」へ進めます)`);
     try {
       const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-send-text", text: AUDIT_TRIGGER_TEXT });
       if (!res || !res.ok) {
+        // 送信そのものが失敗した場合(応答待ちのヒューリスティックとは別の、
+        // その場で分かる確実な失敗)のみ、最初のボタンへ戻す。
         pendingAuditRequest = false;
         showUpdateStep("extract");
         if (res && res.reason === "busy") {
@@ -278,16 +281,16 @@
   // その時点のトラッカー全体をdata/tracker.json(claude-voice-bridgeリポジトリ)へ
   // 上書き保存する。自動同期はしない(常時監視で頻繁に更新されるたびcommitすると
   // 履歴が大量になるため)。2026-09-13追加、ユーザー指示。
-  // 2026-09-27変更、ユーザー指摘「更新ボタンを押した後の履歴取得部分が早すぎて
-  // AIが回答中に取得処理している」への対応で、抽出→同期→読込の自動連続実行を
-  // やめ、1ステップずつボタンを押して進める方式に戻した。この関数自体は
-  // syncGithubBtnのクリックからのみ呼ばれる(戻り値は次のステップへ進めるかの判定用)。
+  // 2026-09-27変更、ユーザー指示「次のボタンはユーザー側のタイミングで押すから
+  // 確認しなくて良い。最初のボタンを押したら、次のボタンを出すだけでいい」
+  // (「３番目のボタンも同様の表示でよい」で📥ボタンにも同じ方針を確認済み)。
+  // 処理の成否に関わらず、クリックした時点で次のボタンへ切り替える。
   async function syncTrackerToGithub() {
     if (!CVB_GAS_URL) {
       setStatus("GitHub同期は未設定です(gas/README.mdの手順でデプロイしてください)", "error");
       return false;
     }
-    setStatus("GitHubへ同期中…");
+    setStatus("GitHubへ同期中です。完了したら「📥 JSONから一覧を読み込む」を押してください");
     try {
       const res = await fetch(CVB_GAS_URL, {
         method: "POST",
@@ -295,20 +298,19 @@
       });
       const json = await res.json();
       if (json.status === "ok") {
-        setStatus("GitHubへ同期しました。次は「📥 JSONから一覧を読み込む」を押してください");
+        setStatus("GitHubへ同期しました");
         return true;
       }
-      setStatus(`GitHub同期エラー: ${json.message || "不明なエラー"}(もう一度「☁️ タスク一覧→JSONへ同期」を押してください)`, "error");
+      setStatus(`GitHub同期エラー: ${json.message || "不明なエラー"}`, "error");
       return false;
     } catch (e) {
-      setStatus("GitHub同期エラー(通信失敗。もう一度「☁️ タスク一覧→JSONへ同期」を押してください)", "error");
+      setStatus("GitHub同期エラー(通信失敗)", "error");
       return false;
     }
   }
-  syncGithubBtn.addEventListener("click", async () => {
-    const ok = await syncTrackerToGithub();
-    if (ok) showUpdateStep("load");
-    // 失敗時はsyncGithubBtnを表示したままにし、再試行できるようにする。
+  syncGithubBtn.addEventListener("click", () => {
+    showUpdateStep("load");
+    syncTrackerToGithub();
   });
 
   // 「📥 JSONから一覧を読み込む」処理: 2026-09-13追加、ユーザー指示。
@@ -387,13 +389,11 @@
     );
     return true;
   }
-  loadTrackerJsonBtn.addEventListener("click", async () => {
-    await loadTrackerJsonAndTemplates();
-    // 2026-09-27変更、ユーザー指示「すべて終わったら最初の抽出ボタンを表示して」:
-    // 成功・失敗どちらの場合も一連の更新はここで区切りとし、最初の抽出ボタンへ戻す
-    // (失敗時に「📥」ボタンだけ表示し続けても、原因(通信エラー等)は再抽出しても
-    // 変わらないことが多いため、ユーザーが状況を見て自分で「🔍」からやり直せるようにする)。
+  // 2026-09-27変更、ユーザー指示「３番目のボタンも同様の表示でよい」: 読込の完了を
+  // 待たず、クリックした時点で最初の抽出ボタンへ戻す(一連の更新はここで一周する)。
+  loadTrackerJsonBtn.addEventListener("click", () => {
     showUpdateStep("extract");
+    loadTrackerJsonAndTemplates();
   });
 
   // テンプレートは { label, text } の配列。textは複数行の長文も可。
@@ -1070,7 +1070,9 @@
     const stored = await chrome.storage.local.get(["cvb_mode", "cvb_rate", "cvb_voice_name", "cvb_panel_mode"]);
     if (stored.cvb_mode === "claude" || stored.cvb_mode === "gemini") mode = stored.cvb_mode;
     updateModeUI();
-    setPanelMode(stored.cvb_panel_mode === "list" ? "list" : "voice");
+    // 2026-09-27変更、ユーザー指示「defaultは一覧側を押している状態にして」:
+    // 初回起動(cvb_panel_mode未設定)時のデフォルトをボイスから一覧へ変更。
+    setPanelMode(stored.cvb_panel_mode === "voice" ? "voice" : "list");
     showUpdateStep("extract"); // 起動時は常に最初のステップから
 
     // 2026-09-27変更: このページ自体はもうタスク一覧を描画しない(widget-tasks.html側の

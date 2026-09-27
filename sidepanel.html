@@ -446,15 +446,16 @@
 
   <div id="panel-tabs">
     <!-- 2026-09-27変更、ユーザー指示「ボイスと一覧の位置を左右変えて、左側に一覧を設けて」 -->
-    <button class="panel-tab" id="panel-tab-list" type="button">📋 一覧</button>
-    <button class="panel-tab active" id="panel-tab-voice" type="button">🎙️ ボイス</button>
+    <!-- 2026-09-27変更、ユーザー指示「defaultは一覧側を押している状態にして」 -->
+    <button class="panel-tab active" id="panel-tab-list" type="button">📋 一覧</button>
+    <button class="panel-tab" id="panel-tab-voice" type="button">🎙️ ボイス</button>
   </div>
 
   <!-- 2026-09-27変更、ユーザー指示「タスク更新ボタンは処理ログの上に表示にして」:
        一覧モードでのみ使うボタン列だが、表示位置は処理ログより上にしたいとの指示のため
        #list-mode-panelの外(共通領域)へ出した。一覧モードの時だけ表示されるよう、
        sidepanel.jsのsetPanelMode()側でdisplayを切り替える。 -->
-  <div id="action-row" style="display:none;">
+  <div id="action-row">
     <button id="extract-room-btn" type="button" title="ルームの抽出→GitHubへ同期→GitHubから読み込みを、1ステップずつボタンで進めます">🔍 タスク一覧を抽出</button>
     <button id="sync-github-btn" type="button" hidden>☁️ タスク一覧→JSONへ同期</button>
     <button id="load-tracker-json-btn" type="button" hidden title="タスク一覧と定例文の両方を、GitHub上の最新内容に更新します">📥 JSONから一覧を読み込む</button>
@@ -472,7 +473,7 @@
     <div id="status">停止中(オーブをクリックして開始)</div>
   </div>
 
-  <div id="voice-mode-panel">
+  <div id="voice-mode-panel" style="display:none;">
     <p class="sub">オーブをクリックで起動。「Claude」または「Gemini」と呼びかけると、そのAIに切り替わって会話が始まります。</p>
 
     <div id="mode-row">
@@ -502,7 +503,7 @@
     </div>
   </div>
 
-  <div id="list-mode-panel" style="display:none;">
+  <div id="list-mode-panel">
     <details class="collapsible-block">
       <summary class="collapsible-summary">❓ 使用方法</summary>
       <div class="collapsible-body">
