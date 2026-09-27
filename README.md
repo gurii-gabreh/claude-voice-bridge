@@ -103,6 +103,14 @@ claude.ai / Gemini(ブラウザ版)との会話を、音声で行うためのChr
 - 「❓ 使用方法」「📦 タスク一覧のJSON管理方法」の2つ(純粋な読み物で、操作ウィジェットを含まないもの)は、サイドパネル右上の「ℹ️」ボタンから開くモーダル(`#info-modal-overlay`)へ移動した。「📌 定例文」「🔧 スキル呼び出し文言」は実際にクリックして使うウィジェットを含むため、これまで通り画面上にインラインで残している。
 - モーダルは、ℹ️ボタン・「閉じる ✕」ボタン・背景(オーバーレイ)クリック・Escapeキーのいずれでも閉じられる。
 
+## 「📐 基本設計」タブ(2026-09-27追加)
+
+Knowledge-Dashboardの「📐 アプリ基本設計」タブと同じ、progress-tracker-dashboardの`data/requirements.json`をそのままビューアー表示するタブ。新規アプリ構想時の標準10項目インタビュー結果と、そのアプリで検討済みの懸念点(concernReview)・懸念点マスタ一覧(concerns)を表示する(この画面での編集はできない。正本の更新はprogress-tracker-dashboard側で行う)。
+
+- PC版(サイドパネル): 上部タブに「📐 基本設計」を追加(📋一覧/🎙️ボイスに続く3つ目)。表示は`widget-design.html`/`widget-design.js`へ切り出し、他のウィジェット(タスク一覧・定例文・スキル呼び出し文言)と同じくiframeで呼び出すだけの構成にしている。`data/requirements.json`は`raw.githubusercontent.com`から直接fetchする(Knowledge-Dashboard版と同じくキャッシュ用の集約JSONは持たず、常に最新を取得)。
+- モバイル版(`webapp/index.html`): 「📐 アプリ基本設計」という折りたたみセクションとして追加。初めて開いた時に`data/requirements.json`をfetchする(常時表示のタスク一覧と違い、追加のfetchが発生するため遅延読み込みにしている)。
+- どちらも表示ロジックはKnowledge-Dashboard側の実装(designAppLabel/renderDesignStats/renderConcernCard等)をそのまま移植したもので、3箇所(Knowledge-Dashboard・claude-voice-bridge PC版・claude-voice-bridgeモバイル版)で同じ見た目・同じデータ構造の解釈になるようにしている。
+
 ## モバイル(iPhone等)向けWeb版タスク一覧
 
 2026-09-19追加、ユーザー指示「携帯で見るように、サイドアプリの一覧部分だけをwebアプリで見えるようにしたい」への対応。`webapp/index.html`を`.github/workflows/deploy-pages.yml`でGitHub Pagesへ自動デプロイし、`https://gurii-gabreh.github.io/claude-voice-bridge/`でPC・iPhoneどちらからも閲覧できるようにした。

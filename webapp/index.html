@@ -229,6 +229,78 @@
     padding-top: 10px;
     border-top: 1px solid var(--panel-border);
   }
+
+  /* 2026-09-27追加、PC版サイドパネルの「📐 基本設計」タブ(widget-design.html)と
+     同じrequirements.jsonビューアーのモバイル版。PC版と同じくKnowledge-Dashboard
+     版のロジックの移植で、ここでの編集はできない。 */
+  :root { --warn: #e0ac4d; }
+  #design-stats { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .design-stat-tile {
+    background: var(--surface);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    text-align: center;
+  }
+  .design-stat-tile .num { font-size: 15px; font-weight: 700; color: var(--accent); }
+  .design-stat-tile .label { font-size: 10px; color: var(--ink-soft); }
+  #design-app-sel {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 13px;
+    font-family: inherit;
+    padding: 6px 8px;
+    margin-bottom: 10px;
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--ink);
+  }
+  #design-empty { color: var(--ink-soft); font-size: 12.5px; }
+  .design-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 0 0 6px; }
+  .design-head h2 { font-size: 15px; margin: 0; color: var(--ink); }
+  .design-tag {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--ink-soft);
+  }
+  .design-tag.repo { color: var(--accent); background: rgba(53, 224, 192, 0.12); }
+  .design-flow-bar {
+    font-size: 11px;
+    color: var(--ink-soft);
+    background: var(--surface);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    margin: 8px 0 12px;
+  }
+  .design-flow-bar .arrow { color: var(--panel-border); margin: 0 4px; }
+  .design-qa-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
+  .design-qa-item { padding-bottom: 8px; border-bottom: 1px solid var(--panel-border); }
+  .design-qa-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .design-qa-item .q { font-size: 11px; font-weight: 700; color: var(--ink-soft); margin: 0 0 3px; }
+  .design-qa-item .q .n { display: inline-block; min-width: 16px; color: var(--accent); }
+  .design-qa-item .a { font-size: 13px; line-height: 1.6; color: var(--ink); white-space: pre-wrap; word-break: break-word; }
+  .design-section-title { font-size: 12.5px; font-weight: 700; color: var(--ink); margin: 16px 0 8px; }
+  .concern-card {
+    background: var(--surface);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 9px 11px;
+    margin-bottom: 8px;
+  }
+  .concern-card.novel { border-color: var(--warn); }
+  .concern-card .concern-id { font-size: 10px; color: var(--accent); }
+  .concern-card.novel .concern-id { color: var(--warn); }
+  .concern-card .concern-trend { font-size: 13px; font-weight: 700; color: var(--ink); margin: 3px 0 6px; }
+  .concern-card dl { margin: 0; }
+  .concern-card dt { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); margin-top: 5px; }
+  .concern-card dd { margin: 1px 0 0; font-size: 12px; line-height: 1.55; color: var(--ink-soft); white-space: pre-wrap; word-break: break-word; }
+  #design-gen-note { display: block; font-size: 10.5px; color: var(--ink-soft); margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -257,6 +329,22 @@
     <div id="tracker-list"></div>
     <div id="tracker-empty" style="display:none;">未解決のタスクはありません。</div>
   </section>
+
+  <!-- 2026-09-27追加、PC版サイドパネルの「📐 基本設計」タブと同じ、progress-tracker-dashboard
+       の data/requirements.json をそのままビューアー表示するだけの画面(編集はできない)。
+       初回展開時に読み込む(常時表示のタスク一覧とは違い、別リポジトリへの追加fetchが
+       発生するため、開いた時だけ取得する)。 -->
+  <details class="collapsible-block" id="design-block">
+    <summary class="collapsible-summary">📐 アプリ基本設計</summary>
+    <div class="collapsible-body">
+      <p class="sub" style="margin-bottom:6px;">新規アプリ構想の標準10項目インタビュー結果と、そのアプリで検討済みの懸念点(concernReview)を表示します。データは<code>data/requirements.json</code>(gurii-gabreh/progress-tracker-dashboard)を直接fetchして表示しているだけで、この画面での編集はできません。</p>
+      <div id="design-stats"></div>
+      <select id="design-app-sel"></select>
+      <div id="design-empty" style="display:none;">要件定義シートがまだ登録されていません。</div>
+      <div id="design-detail"></div>
+      <span id="design-gen-note"></span>
+    </div>
+  </details>
 
   <details class="collapsible-block">
     <summary class="collapsible-summary">📦 タスク一覧のJSON管理方法</summary>
@@ -548,6 +636,176 @@
 
   refreshBtn.addEventListener("click", loadAll);
   loadAll();
+
+  // 2026-09-27追加: PC版サイドパネルの「📐 基本設計」タブ(widget-design.html)と
+  // 同じロジックの移植(Knowledge-Dashboard版のさらに移植元)。
+  const REQUIREMENTS_URL =
+    "https://raw.githubusercontent.com/gurii-gabreh/progress-tracker-dashboard/main/data/requirements.json";
+  const designStatsEl = document.getElementById("design-stats");
+  const designAppSelEl = document.getElementById("design-app-sel");
+  const designEmptyEl = document.getElementById("design-empty");
+  const designDetailEl = document.getElementById("design-detail");
+  const designGenNoteEl = document.getElementById("design-gen-note");
+  let designData = null;
+  let designLoaded = false;
+  let designSelectedId = null;
+
+  function escapeHtml(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function designAppLabel(req) {
+    return `${req.repo} — ${req.title}`;
+  }
+
+  function renderDesignStats() {
+    const reqs = (designData && designData.requirements) || [];
+    const statusCounts = {};
+    reqs.forEach((r) => {
+      const s = r.status || "不明";
+      statusCounts[s] = (statusCounts[s] || 0) + 1;
+    });
+    const tiles = [
+      { num: reqs.length, label: "登録アプリ数" },
+      ...Object.entries(statusCounts).map(([status, num]) => ({ num, label: status })),
+    ];
+    designStatsEl.innerHTML = tiles
+      .map((t) => `<div class="design-stat-tile"><div class="num">${t.num}</div><div class="label">${escapeHtml(t.label)}</div></div>`)
+      .join("");
+  }
+
+  function renderDesignAppOptions() {
+    const reqs = (designData && designData.requirements) || [];
+    designAppSelEl.innerHTML = "";
+    reqs.forEach((req) => {
+      const opt = document.createElement("option");
+      opt.value = req.id;
+      opt.textContent = designAppLabel(req);
+      designAppSelEl.appendChild(opt);
+    });
+    if (reqs.length) {
+      if (!designSelectedId || !reqs.some((r) => r.id === designSelectedId)) {
+        designSelectedId = reqs[0].id;
+      }
+      designAppSelEl.value = designSelectedId;
+    }
+  }
+
+  function findConcernById(concernsItems, id) {
+    return (concernsItems || []).find((c) => c.id === id);
+  }
+
+  function renderConcernCard(review, concernsItems) {
+    if (review.concernId) {
+      const master = findConcernById(concernsItems, review.concernId);
+      const trend = master ? master.trend : "(懸念点マスタに見つかりません)";
+      return `
+        <div class="concern-card">
+          <span class="concern-id">${escapeHtml(review.concernId)}</span>
+          <div class="concern-trend">${escapeHtml(trend || "")}</div>
+          <dl>
+            <dt>該当した理由</dt><dd>${escapeHtml(review.matchedBecause || "")}</dd>
+            <dt>相談した結果・最終的な結論</dt><dd>${escapeHtml(review.resolution || "")}</dd>
+          </dl>
+        </div>`;
+    }
+    return `
+      <div class="concern-card novel">
+        <span class="concern-id">新規懸念(concerns未登録)</span>
+        <div class="concern-trend">${escapeHtml(review.description || "")}</div>
+        <dl>
+          <dt>相談した結果・最終的な結論</dt><dd>${escapeHtml(review.resolution || "")}</dd>
+        </dl>
+      </div>`;
+  }
+
+  function renderDesignDetail() {
+    const reqs = (designData && designData.requirements) || [];
+    const concernsItems = (designData && designData.concerns && designData.concerns.items) || [];
+
+    if (!reqs.length) {
+      designDetailEl.innerHTML = "";
+      designEmptyEl.style.display = "block";
+      return;
+    }
+    designEmptyEl.style.display = "none";
+
+    const req = reqs.find((r) => r.id === designSelectedId) || reqs[0];
+
+    const qaHtml = (req.answers || [])
+      .map(
+        (a) => `
+        <div class="design-qa-item">
+          <div class="q"><span class="n">${a.n}.</span>${escapeHtml(a.question || "")}</div>
+          <div class="a">${escapeHtml(a.answer || "")}</div>
+        </div>`
+      )
+      .join("");
+
+    const reviewItems = req.concernReview || [];
+    const reviewHtml = reviewItems.length
+      ? reviewItems.map((r) => renderConcernCard(r, concernsItems)).join("")
+      : `<p style="font-size:12px;color:var(--ink-soft);margin:0;">このアプリで該当した懸念点はありません。</p>`;
+
+    const masterHtml = concernsItems
+      .map(
+        (c) => `
+        <div class="concern-card">
+          <span class="concern-id">${escapeHtml(c.id)}</span>
+          <div class="concern-trend">${escapeHtml(c.trend || "")}</div>
+          <dl>
+            <dt>対策</dt><dd>${escapeHtml(c.mitigation || "")}</dd>
+          </dl>
+        </div>`
+      )
+      .join("");
+
+    designDetailEl.innerHTML = `
+      <div class="design-head">
+        <h2>${escapeHtml(req.title || req.repo || "")}</h2>
+        <span class="design-tag repo">${escapeHtml(req.repo || "")}</span>
+        <span class="design-tag">${escapeHtml(req.status || "不明")}</span>
+      </div>
+      <div class="design-flow-bar">① 標準10項目に回答<span class="arrow">→</span>② まとめて懸念点(concerns)と照合</div>
+      <div class="design-qa-list">${qaHtml}</div>
+      <div class="design-section-title">⚠️ このアプリで該当した懸念点(concernReview)</div>
+      ${reviewHtml}
+      <div class="design-section-title">📖 懸念点マスタ一覧(concerns)</div>
+      ${masterHtml}
+    `;
+  }
+
+  designAppSelEl.addEventListener("change", (e) => {
+    designSelectedId = e.target.value;
+    renderDesignDetail();
+  });
+
+  async function loadDesign() {
+    if (designLoaded) return;
+    designLoaded = true;
+    try {
+      const res = await fetch(`${REQUIREMENTS_URL}?t=${Date.now()}`, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      designData = await res.json();
+    } catch (e) {
+      designData = null;
+    }
+    renderDesignStats();
+    renderDesignAppOptions();
+    renderDesignDetail();
+    designGenNoteEl.textContent = designData
+      ? "取得元: raw.githubusercontent.com(progress-tracker-dashboard、キャッシュ無し毎回取得)"
+      : "取得に失敗しました。時間を置いて再度開いてください。";
+  }
+
+  document.getElementById("design-block").addEventListener("toggle", (e) => {
+    if (e.target.open) loadDesign();
+  });
 </script>
 </body>
 </html>

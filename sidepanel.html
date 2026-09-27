@@ -70,7 +70,7 @@
     color: var(--accent);
     box-shadow: 0 0 10px rgba(41, 230, 255, 0.35) inset;
   }
-  #voice-mode-panel, #list-mode-panel {
+  #voice-mode-panel, #list-mode-panel, #design-mode-panel {
     width: 100%;
     display: flex;
     flex-direction: column;
@@ -307,7 +307,7 @@
     color: var(--ink-soft);
     margin-bottom: 8px;
   }
-  #tracker-section-label {
+  .section-eyebrow {
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.05em;
@@ -562,6 +562,10 @@
     <!-- 2026-09-27変更、ユーザー指示「defaultは一覧側を押している状態にして」 -->
     <button class="panel-tab active" id="panel-tab-list" type="button">📋 一覧</button>
     <button class="panel-tab" id="panel-tab-voice" type="button">🎙️ ボイス</button>
+    <!-- 2026-09-27追加: Knowledge-Dashboard版と同じ「📐 アプリ基本設計」の
+         claude-voice-bridge自身の等価タブ。requirements.jsonをそのまま
+         ビューアー表示するだけ(widget-design.html)。 -->
+    <button class="panel-tab" id="panel-tab-design" type="button">📐 基本設計</button>
   </div>
 
   <!-- 2026-09-27変更、ユーザー指示「タスク更新ボタンは処理ログの上に表示にして」:
@@ -625,12 +629,22 @@
          (header-row内のℹ️ボタン)へ移動した。実際の操作ウィジェットを含む
          #tracker-sectionはここに残る。 -->
     <div id="tracker-section">
-      <div id="tracker-section-label">AI開発情報一覧</div>
+      <div class="section-eyebrow">AI開発情報一覧</div>
       <div class="section-title">📋 未解決の相談・進行中のタスク(見逃し防止)</div>
       <!-- 2026-09-27追加、ユーザー指示「タスク一覧のみを1つのウィジェットにしたい」:
            表示・絞り込み・クリックジャンプはwidget-tasks.htmlへ切り出し、ここではiframeで
            呼び出すだけにした。抽出トリガー(action-row)はこれまで通りこのページ側に残す。 -->
       <iframe id="tasks-widget-frame" class="widget-frame" src="widget-tasks.html" title="タスク一覧"></iframe>
+    </div>
+  </div>
+
+  <!-- 2026-09-27追加、ユーザー承認「進めて」(Knowledge-Dashboard版に続く2つ目の実装)。
+       表示・選択操作のみのウィジェット(widget-design.html)をiframeで呼び出すだけ。 -->
+  <div id="design-mode-panel" style="display:none;">
+    <div id="design-section">
+      <div class="section-eyebrow">アプリ基本設計</div>
+      <div class="section-title">📐 新規相談時の標準10項目・懸念点照合</div>
+      <iframe id="design-widget-frame" class="widget-frame" src="widget-design.html" title="アプリ基本設計"></iframe>
     </div>
   </div>
 

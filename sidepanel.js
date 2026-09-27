@@ -28,8 +28,10 @@
   const loadTrackerJsonBtn = document.getElementById("load-tracker-json-btn");
   const panelTabVoiceBtn = document.getElementById("panel-tab-voice");
   const panelTabListBtn = document.getElementById("panel-tab-list");
+  const panelTabDesignBtn = document.getElementById("panel-tab-design");
   const voiceModePanelEl = document.getElementById("voice-mode-panel");
   const listModePanelEl = document.getElementById("list-mode-panel");
+  const designModePanelEl = document.getElementById("design-mode-panel");
   const actionRowEl = document.getElementById("action-row-wrap");
   const rateSliderEl = document.getElementById("rate-slider");
   const rateValueEl = document.getElementById("rate-value");
@@ -95,24 +97,31 @@
   modeClaudeBtn.addEventListener("click", () => setMode("claude"));
   modeGeminiBtn.addEventListener("click", () => setMode("gemini"));
 
-  // ---- パネル切り替え(ボイスモード / 一覧モード) ----
+  // ---- パネル切り替え(ボイスモード / 一覧モード / 基本設計モード) ----
   // 2026-09-13追加、ユーザー指示「ボイスモードと一覧モードは、上部タブにより
-  // 切り替えられるようにしろ」。
+  // 切り替えられるようにしろ」。2026-09-27追加、Knowledge-Dashboard版に続く
+  // claude-voice-bridge自身の「📐 基本設計」タブを3つ目のモードとして追加。
   function setPanelMode(panel) {
     const isVoice = panel === "voice";
+    const isList = panel === "list";
+    const isDesign = panel === "design";
     panelTabVoiceBtn.classList.toggle("active", isVoice);
-    panelTabListBtn.classList.toggle("active", !isVoice);
+    panelTabListBtn.classList.toggle("active", isList);
+    panelTabDesignBtn.classList.toggle("active", isDesign);
     voiceModePanelEl.style.display = isVoice ? "flex" : "none";
-    listModePanelEl.style.display = isVoice ? "none" : "flex";
+    listModePanelEl.style.display = isList ? "flex" : "none";
+    designModePanelEl.style.display = isDesign ? "flex" : "none";
     // 2026-09-27変更、ユーザー指示「タスク更新ボタンは処理ログの上に表示にして」:
     // #action-rowを#list-mode-panelの外(処理ログより上の共通領域)へ移したため、
     // 表示/非表示はここで一覧モードかどうかに応じて切り替える。カード枠(#action-row-wrap)
     // ごと切り替えるため、中の#action-rowはCSS側で常時flexのままにしてある。
-    actionRowEl.style.display = isVoice ? "none" : "block";
+    // 基本設計モードは抽出/同期/読込のいずれとも無関係のため、一覧モードの時だけ表示。
+    actionRowEl.style.display = isList ? "block" : "none";
     chrome.storage.local.set({ cvb_panel_mode: panel });
   }
   panelTabVoiceBtn.addEventListener("click", () => setPanelMode("voice"));
   panelTabListBtn.addEventListener("click", () => setPanelMode("list"));
+  panelTabDesignBtn.addEventListener("click", () => setPanelMode("design"));
 
   // ---- claude-voice-bridge専用のGAS中継(gas/README.md参照) ----
   // GitHubのdata/tracker.json・data/knowledge-log.jsonへの書き込みを担う。
@@ -1101,7 +1110,10 @@
     updateModeUI();
     // 2026-09-27変更、ユーザー指示「defaultは一覧側を押している状態にして」:
     // 初回起動(cvb_panel_mode未設定)時のデフォルトをボイスから一覧へ変更。
-    setPanelMode(stored.cvb_panel_mode === "voice" ? "voice" : "list");
+    // 2026-09-27追加: 「📐 基本設計」モード追加に伴い、有効な3値のいずれかを
+    // そのまま復元し、未設定・不正値の場合のみ一覧をデフォルトにする。
+    const validModes = ["voice", "list", "design"];
+    setPanelMode(validModes.includes(stored.cvb_panel_mode) ? stored.cvb_panel_mode : "list");
     showUpdateStep("extract"); // 起動時は常に最初のステップから
 
     // 2026-09-27変更: このページ自体はもうタスク一覧を描画しない(widget-tasks.html側の

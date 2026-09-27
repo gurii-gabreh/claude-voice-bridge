@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>アプリ基本設計</title>
+<link rel="stylesheet" href="widget-common.css">
+<style>
+  /* Claude Voice Bridge — 「📐 基本設計」ウィジェット(2026-09-27追加)
+     Knowledge-Dashboardの「📐 アプリ基本設計」タブと同じ、progress-tracker-dashboard
+     の data/requirements.json をそのままビューアーとして表示するだけの画面。
+     ここでの編集はできない(正本の更新はprogress-tracker-dashboard側で行う)。
+     色・変数はwidget-common.cssのものを流用し、Knowledge-Dashboard版の見た目
+     (design-head/design-flow-bar/design-qa-list/concern-card等)を
+     claude-voice-bridgeのダーク基調テーマへ合わせて移植した。 */
+  :root { --warn: #e0ac4d; }
+
+  #design-note {
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin: 0 0 8px;
+    line-height: 1.5;
+  }
+  #design-note code {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 10.5px;
+  }
+  #design-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .design-stat-tile {
+    background: var(--surface);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 5px 10px;
+    text-align: center;
+  }
+  .design-stat-tile .num { font-size: 14px; font-weight: 700; color: var(--accent); }
+  .design-stat-tile .label { font-size: 9.5px; color: var(--ink-soft); }
+
+  #design-app-sel {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 11px;
+    font-family: inherit;
+    padding: 5px 6px;
+    margin-bottom: 10px;
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--ink);
+  }
+
+  #design-empty { color: var(--ink-soft); font-size: 12px; display: none; }
+
+  .design-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0 0 6px;
+  }
+  .design-head h2 { font-size: 14px; margin: 0; color: var(--ink); }
+  .design-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--ink-soft);
+  }
+  .design-tag.repo { color: var(--accent); background: rgba(41, 230, 255, 0.1); }
+
+  .design-flow-bar {
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    background: var(--surface);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    margin: 8px 0 12px;
+  }
+  .design-flow-bar .arrow { color: var(--panel-border); margin: 0 4px; }
+
+  .design-qa-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
+  .design-qa-item { padding-bottom: 8px; border-bottom: 1px solid var(--panel-border); }
+  .design-qa-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .design-qa-item .q {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    margin: 0 0 3px;
+  }
+  .design-qa-item .q .n { display: inline-block; min-width: 16px; color: var(--accent); }
+  .design-qa-item .a {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--ink);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .design-section-title {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 16px 0 8px;
+  }
+
+  .concern-card {
+    background: var(--surface);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+  }
+  .concern-card.novel { border-color: var(--warn); }
+  .concern-card .concern-id { font-size: 9.5px; color: var(--accent); }
+  .concern-card.novel .concern-id { color: var(--warn); }
+  .concern-card .concern-trend { font-size: 12px; font-weight: 700; color: var(--ink); margin: 3px 0 6px; }
+  .concern-card dl { margin: 0; }
+  .concern-card dt {
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    margin-top: 5px;
+  }
+  .concern-card dd {
+    margin: 1px 0 0;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  #design-gen-note { display: block; font-size: 10px; color: var(--ink-soft); margin-top: 10px; }
+</style>
+</head>
+<body>
+  <p id="design-note">
+    新規アプリ構想の標準10項目インタビュー結果と、そのアプリで検討済みの懸念点(concernReview)を表示します。
+    データは<code>data/requirements.json</code>(gurii-gabreh/progress-tracker-dashboard)を
+    直接fetchして表示しているだけで、この画面での編集はできません。
+  </p>
+  <div id="design-stats"></div>
+  <select id="design-app-sel"></select>
+  <div id="design-empty">要件定義シートがまだ登録されていません。</div>
+  <div id="design-detail"></div>
+  <span id="design-gen-note"></span>
+  <div id="widget-status"></div>
+
+  <script src="widget-common.js"></script>
+  <script src="widget-design.js"></script>
+</body>
+</html>
