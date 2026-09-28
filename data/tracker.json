@@ -1,26 +1,26 @@
 {
   "items": [
     {
-      "createdAt": 1790475162280,
+      "createdAt": 1790612256266,
       "id": 1,
-      "kind": "相談",
-      "quote": "要件定義シート遡及作成」はスクリプト準備済みでまだ未実行のままです",
-      "repo": "progress-tracker-dashboard",
+      "kind": "未完了作業",
+      "quote": "chrome://extensionsで拡張機能を再読み込みしてご確認ください",
+      "repo": "claude-voice-bridge",
       "source": {
         "mode": "claude",
         "title": "Claude Code",
         "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
       "status": "active",
-      "summary": "既存12リポジトリの要件定義シート遡及作成を続行してよいか確認待ち【タスクID:回答09/27 10:19:33-1】",
-      "taskIdMarker": "回答09/27 10:19:33-1",
+      "summary": "更新ボタンのカード化・使用方法モーダル化について、実際のChrome拡張機能での再読み込み後の動作確認をユーザーへ依頼中 【タスクID:回答09/27 11:43:56-1】",
+      "taskIdMarker": "回答09/27 11:43:56-1",
       "uncertain": false
     },
     {
-      "createdAt": 1790475162280,
+      "createdAt": 1790612256266,
       "id": 2,
       "kind": "未完了作業",
-      "quote": "今も「🎙️ ボイス」「📋 一覧」の2タブのままで、まだ追加していません",
+      "quote": "chrome://extensionsでの再読み込み後)はまだですので",
       "repo": "claude-voice-bridge",
       "source": {
         "mode": "claude",
@@ -28,31 +28,15 @@
         "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
       "status": "active",
-      "summary": "「📐 基本設計」タブ(3つ目のタブ、確認済み仕様)本体が未実装【タスクID:回答09/26 17:18:23-1】",
-      "taskIdMarker": "回答09/26 17:18:23-1",
+      "summary": "「📐 基本設計」タブについて、実際のChrome拡張機能での再読み込み後の動作確認をユーザーへ依頼中 【タスクID:回答09/27 12:15:07-1】",
+      "taskIdMarker": "回答09/27 12:15:07-1",
       "uncertain": false
     },
     {
-      "createdAt": 1790475162280,
+      "createdAt": 1790612256266,
       "id": 3,
       "kind": "未完了作業",
-      "quote": "Artifactのモックアップのみで、実際のdashboard.htmlにはまだ反映していません",
-      "repo": "Knowledge-Dashboard",
-      "source": {
-        "mode": "claude",
-        "title": "Claude Code",
-        "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
-      },
-      "status": "active",
-      "summary": "「アプリ基本設計」4番目のタブ本体が未実装(モックアップのみ)【タスクID:回答09/26 17:18:23-2】",
-      "taskIdMarker": "回答09/26 17:18:23-2",
-      "uncertain": false
-    },
-    {
-      "createdAt": 1790475162280,
-      "id": 4,
-      "kind": "相談",
-      "quote": "画面のイメージフォーム的なものを設定し、その中でウィジェットを自由に変えて更新する",
+      "quote": "gas/code.gsを変更したので、Apps Scriptエディタで",
       "repo": "claude-voice-bridge",
       "source": {
         "mode": "claude",
@@ -60,8 +44,8 @@
         "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
       "status": "active",
-      "summary": "設定タブでウィジェット表示を選べる機能の実装可否・時期が未確定【タスクID:回答09/27 10:38:22-1】",
-      "taskIdMarker": "回答09/27 10:38:22-1",
+      "summary": "ジャーナル面談機能について、gas/code.gsのApps Script手動再デプロイとGeminiアプリでのGem作成・実機での動作確認をユーザーへ依頼中 【タスクID:回答09/27 23:42:11-1】",
+      "taskIdMarker": "回答09/27 23:42:11-1",
       "uncertain": false
     }
   ]
