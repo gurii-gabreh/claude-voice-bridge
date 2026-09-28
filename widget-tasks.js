@@ -36,16 +36,19 @@
 
   function buildJumpSearchText(item, displayTaskId) {
     const marker = item.taskIdMarker;
+    // 2026-09-29変更: ステータス文言も表示順の連番ではなく、可能な限り本物のタスクID
+    // (item.taskIdMarker)を使う。
+    const idLabel = marker || displayTaskId;
     if (marker) {
       const m = marker.match(/^(回答|発言)(.+?)-\d+$/);
       if (m && m[1] === "回答") {
-        return { text: `【回答${m[2]}】`, label: `タスクID: ${displayTaskId}(元の回答)` };
+        return { text: `【回答${m[2]}】`, label: `タスクID: ${idLabel}(元の回答)` };
       }
     }
     if (item.quote) {
-      return { text: item.quote, label: `タスクID: ${displayTaskId}(引用箇所)` };
+      return { text: item.quote, label: `タスクID: ${idLabel}(引用箇所)` };
     }
-    return { text: `【タスクID:${marker || displayTaskId}】`, label: `タスクID: ${displayTaskId}` };
+    return { text: `【タスクID:${idLabel}】`, label: `タスクID: ${idLabel}` };
   }
 
   async function navigateToTaskId(searchText, statusLabel) {
@@ -111,12 +114,16 @@
 
     activeItems.forEach((item, index) => {
       const tr = document.createElement("tr");
-      const isConsult = item.kind === "相談";
+      // 2026-09-29変更、ユーザー指摘「ステータスはユーザーが対応中なのかAIが対応中
+      // なのかをわかりやすくして」: 種別(相談/未完了作業)だけでなく、item.assignee
+      // (room-task-auditが出力する「担当」フィールド、無ければkindからフォールバック)
+      // で次に動くべきなのがユーザーかAIかを判定してバッジ表示を出し分ける。
+      const isUserTurn = (item.assignee || (item.kind === "相談" ? "ユーザー" : "AI")) === "ユーザー";
       tr.innerHTML =
         `<td></td>` +
         `<td class="tracker-text"></td>` +
         `<td class="tracker-room"></td>` +
-        `<td><span class="tracker-badge ${isConsult ? "waiting" : "working"}">${isConsult ? "回答待ち" : "作業中"}${item.uncertain ? "・不確実" : ""}</span></td>` +
+        `<td><span class="tracker-badge ${isUserTurn ? "waiting" : "working"}">${isUserTurn ? "🙋 ユーザー対応待ち" : "🤖 AI作業中"}${item.uncertain ? "・不確実" : ""}</span></td>` +
         `<td></td>`;
 
       const numCell = tr.firstElementChild;
@@ -125,7 +132,12 @@
       numBtn.type = "button";
       const displayTaskId = index + 1;
       const jump = buildJumpSearchText(item, displayTaskId);
-      numBtn.textContent = `タスクID: ${displayTaskId}`;
+      // 2026-09-29修正、ユーザー指摘「タスクIDは、回答09/27 11:43:56-1を明記して」:
+      // 以前はここに表示順の連番(displayTaskId)を出していたが、これは本物のタスクID
+      // ではなく単なる行位置だった。room-task-auditが埋め込む安定なID(taskIdMarker、
+      // 例: 回答09/27 11:43:56-1)が取れている場合はそれをそのまま表示する。旧形式の
+      // 監査結果でtaskIdMarkerが無い場合のみ、従来通り連番にフォールバックする。
+      numBtn.textContent = item.taskIdMarker ? `タスクID: ${item.taskIdMarker}` : `タスクID: ${displayTaskId}`;
       numBtn.title = "クリックでルーム内の該当箇所(元の回答)へ移動(連続クリックで次の出現箇所へ)";
       numBtn.onclick = () => navigateToTaskId(jump.text, jump.label);
       numCell.appendChild(numBtn);
