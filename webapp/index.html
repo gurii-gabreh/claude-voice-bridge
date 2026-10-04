@@ -494,8 +494,6 @@
 
     <section>
       <div class="section-title">📝 面談後のトランスクリプトを貼って記録</div>
-      <label class="sub" style="display:block;margin-bottom:4px;" for="journal-date">振り返り対象の日付</label>
-      <input type="date" id="journal-date">
       <textarea id="journal-transcript" placeholder="Gemini Liveのトランスクリプトをそのまま貼り付けてください"></textarea>
       <div class="btn-row">
         <button id="save-journal-btn" type="button">💾 保存</button>
@@ -1003,7 +1001,6 @@
 
   const gemPromptEl = document.getElementById("gem-prompt");
   const copyGemPromptBtn = document.getElementById("copy-gem-prompt-btn");
-  const journalDateEl = document.getElementById("journal-date");
   const journalTranscriptEl = document.getElementById("journal-transcript");
   const saveJournalBtn = document.getElementById("save-journal-btn");
   const journalStatusEl = document.getElementById("journal-status");
@@ -1016,15 +1013,13 @@
   gemPromptEl.value = GEM_PROMPT_TEXT;
   copyGemPromptBtn.addEventListener("click", () => copyToClipboard(GEM_PROMPT_TEXT, copyGemPromptBtn));
 
+  // 2026-10-05変更(ユーザー指摘): 日付欄は廃止し、保存ボタンを押した時点の日付を
+  // そのまま使う(widget-journal.jsと同じ変更。理由はそちらのコメント参照)。
   function todayLocalISODate() {
     const d = new Date();
     const tzOffsetMs = d.getTimezoneOffset() * 60000;
     return new Date(d.getTime() - tzOffsetMs).toISOString().slice(0, 10);
   }
-  // 2026-10-05追加(不具合修正): ページを開いたまま日付をまたぐと日付欄が古いままになるため、
-  // 保存時に未編集なら実際の今日へ自動補正する(widget-journal.jsと同じ修正)。
-  let autoSetDate = todayLocalISODate();
-  journalDateEl.value = autoSetDate;
 
   function renderJournalList(entries) {
     journalListEl.innerHTML = "";
@@ -1070,14 +1065,9 @@
       journalStatusEl.textContent = "貼り付け内容が空です";
       return;
     }
-    const realToday = todayLocalISODate();
-    if (journalDateEl.value === autoSetDate && autoSetDate !== realToday) {
-      autoSetDate = realToday;
-      journalDateEl.value = realToday;
-    }
     const entry = {
       id: `${Date.now()}`,
-      date: journalDateEl.value || realToday,
+      date: todayLocalISODate(),
       rawTranscript: transcript,
       createdAt: Date.now(),
       analyzed: false,

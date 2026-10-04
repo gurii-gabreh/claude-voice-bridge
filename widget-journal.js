@@ -43,7 +43,6 @@
 
   const gemPromptEl = document.getElementById("gem-prompt");
   const copyGemPromptBtn = document.getElementById("copy-gem-prompt-btn");
-  const journalDateEl = document.getElementById("journal-date");
   const journalTranscriptEl = document.getElementById("journal-transcript");
   const saveJournalBtn = document.getElementById("save-journal-btn");
   const journalListEl = document.getElementById("journal-list");
@@ -67,17 +66,15 @@
     }
   });
 
+  // 2026-10-05変更(ユーザー指摘): 日付欄は「面談日と保存日がずれる場合の手動補正用」
+  // だったが、日をまたいだまま開きっぱなしだと表示が古いまま残る不具合があった上、
+  // この面談は基本的に即日保存する運用のため、欄自体を廃止し保存ボタンを押した時点の
+  // 日付をそのまま使うようにした(アウトプット側にも日付情報が含まれるため欄自体は不要)。
   function todayLocalISODate() {
     const d = new Date();
     const tzOffsetMs = d.getTimezoneOffset() * 60000;
     return new Date(d.getTime() - tzOffsetMs).toISOString().slice(0, 10);
   }
-  // 2026-10-05追加(不具合修正): 日付欄はページ読み込み時に1回だけtodayLocalISODate()を
-  // セットするため、サイドパネルを開いたまま日付をまたぐと古い日付が残ってしまう
-  // (ユーザー指摘)。保存時、この欄が読み込み時の値のまま変更されていなければ、
-  // 実際の「今日」へ自動で補正する(ユーザーが意図的に別の日付へ変更した場合は尊重する)。
-  let autoSetDate = todayLocalISODate();
-  journalDateEl.value = autoSetDate;
 
   function renderJournalList(entries) {
     journalListEl.innerHTML = "";
@@ -121,15 +118,9 @@
       setStatus("貼り付け内容が空です", "error");
       return;
     }
-    const realToday = todayLocalISODate();
-    if (journalDateEl.value === autoSetDate && autoSetDate !== realToday) {
-      // 日付欄が未編集のまま日をまたいでいたので、実際の今日へ補正する。
-      autoSetDate = realToday;
-      journalDateEl.value = realToday;
-    }
     const entry = {
       id: `${Date.now()}`,
-      date: journalDateEl.value || realToday,
+      date: todayLocalISODate(),
       rawTranscript: transcript,
       createdAt: Date.now(),
       analyzed: false,
