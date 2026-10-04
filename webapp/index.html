@@ -975,6 +975,7 @@
   const GEM_PROMPT_TEXT = `あなたは「1日の振り返り面談」を担当するAIです。ユーザーと音声で自然に会話してください。
 
 ## 進め方
+0. 会話の最初の発言の冒頭で、今日の日付を必ず「【日付: YYYY-MM-DD】」という形式で1行だけ述べてから、挨拶・本題に入ってください(例: 「【日付: 2026-10-04】今日もお疲れ様!」)。この形式・位置は厳守すること(面談後のトランスクリプトから日付を自動抽出するために使うため)。
 1. まず今日あった出来事を、決まった質問を1つずつ聞きながら振り返る(一度に複数質問しない、1つ答えが返ってきたら次へ)。
    決まった質問:
    - 今日できたことは?(できたことについて、良かった点・悪かった点の両方を聞く)
@@ -1013,12 +1014,23 @@
   gemPromptEl.value = GEM_PROMPT_TEXT;
   copyGemPromptBtn.addEventListener("click", () => copyToClipboard(GEM_PROMPT_TEXT, copyGemPromptBtn));
 
-  // 2026-10-05変更(ユーザー指摘): 日付欄は廃止し、保存ボタンを押した時点の日付を
-  // そのまま使う(widget-journal.jsと同じ変更。理由はそちらのコメント参照)。
+  // 2026-10-05変更(ユーザー指摘): 日付欄を廃止した後、Gemプロンプトに会話冒頭で
+  // 「【日付: YYYY-MM-DD】」を言わせる指示を追加し、保存時にトランスクリプトから
+  // 日付を自動抽出する方式にした(widget-journal.jsと同じ変更。理由はそちらのコメント参照)。
   function todayLocalISODate() {
     const d = new Date();
     const tzOffsetMs = d.getTimezoneOffset() * 60000;
     return new Date(d.getTime() - tzOffsetMs).toISOString().slice(0, 10);
+  }
+  function extractDateFromTranscript(text) {
+    const m = text.match(/【日付[:：]\s*(\d{4})-(\d{2})-(\d{2})】/);
+    if (!m) return null;
+    const [, y, mo, d] = m;
+    const date = new Date(Number(y), Number(mo) - 1, Number(d));
+    if (date.getFullYear() !== Number(y) || date.getMonth() !== Number(mo) - 1 || date.getDate() !== Number(d)) {
+      return null;
+    }
+    return `${y}-${mo}-${d}`;
   }
 
   function renderJournalList(entries) {
@@ -1067,7 +1079,7 @@
     }
     const entry = {
       id: `${Date.now()}`,
-      date: todayLocalISODate(),
+      date: extractDateFromTranscript(transcript) || todayLocalISODate(),
       rawTranscript: transcript,
       createdAt: Date.now(),
       analyzed: false,

@@ -17,6 +17,7 @@
   const GEM_PROMPT_TEXT = `あなたは「1日の振り返り面談」を担当するAIです。ユーザーと音声で自然に会話してください。
 
 ## 進め方
+0. 会話の最初の発言の冒頭で、今日の日付を必ず「【日付: YYYY-MM-DD】」という形式で1行だけ述べてから、挨拶・本題に入ってください(例: 「【日付: 2026-10-04】今日もお疲れ様!」)。この形式・位置は厳守すること(面談後のトランスクリプトから日付を自動抽出するために使うため)。
 1. まず今日あった出来事を、決まった質問を1つずつ聞きながら振り返る(一度に複数質問しない、1つ答えが返ってきたら次へ)。
    決まった質問:
    - 今日できたことは?(できたことについて、良かった点・悪かった点の両方を聞く)
@@ -66,14 +67,26 @@
     }
   });
 
-  // 2026-10-05変更(ユーザー指摘): 日付欄は「面談日と保存日がずれる場合の手動補正用」
-  // だったが、日をまたいだまま開きっぱなしだと表示が古いまま残る不具合があった上、
-  // この面談は基本的に即日保存する運用のため、欄自体を廃止し保存ボタンを押した時点の
-  // 日付をそのまま使うようにした(アウトプット側にも日付情報が含まれるため欄自体は不要)。
+  // 2026-10-05変更(ユーザー指摘): 日付欄を廃止した後、「保存ボタンを押した時点の日付」を
+  // 使う方式に一度したが、面談と保存にタイムラグがあると(例: 23時台に面談し0時過ぎに保存)
+  // 結局ずれてしまうと指摘を受けた。そこでGemプロンプト側に「会話の冒頭で今日の日付を
+  // 【日付: YYYY-MM-DD】の形式で必ず言う」指示を追加し、保存時はそのトランスクリプトから
+  // 日付を自動抽出する方式にした(抽出できなければ保存時点の日付にフォールバックする)。
   function todayLocalISODate() {
     const d = new Date();
     const tzOffsetMs = d.getTimezoneOffset() * 60000;
     return new Date(d.getTime() - tzOffsetMs).toISOString().slice(0, 10);
+  }
+  function extractDateFromTranscript(text) {
+    const m = text.match(/【日付[:：]\s*(\d{4})-(\d{2})-(\d{2})】/);
+    if (!m) return null;
+    const [, y, mo, d] = m;
+    // 実在する日付か簡易検証(例: 13月・32日等の明らかな誤りはフォールバックさせる)。
+    const date = new Date(Number(y), Number(mo) - 1, Number(d));
+    if (date.getFullYear() !== Number(y) || date.getMonth() !== Number(mo) - 1 || date.getDate() !== Number(d)) {
+      return null;
+    }
+    return `${y}-${mo}-${d}`;
   }
 
   function renderJournalList(entries) {
@@ -120,7 +133,7 @@
     }
     const entry = {
       id: `${Date.now()}`,
-      date: todayLocalISODate(),
+      date: extractDateFromTranscript(transcript) || todayLocalISODate(),
       rawTranscript: transcript,
       createdAt: Date.now(),
       analyzed: false,
