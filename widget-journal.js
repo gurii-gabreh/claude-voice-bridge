@@ -72,7 +72,12 @@
     const tzOffsetMs = d.getTimezoneOffset() * 60000;
     return new Date(d.getTime() - tzOffsetMs).toISOString().slice(0, 10);
   }
-  journalDateEl.value = todayLocalISODate();
+  // 2026-10-05追加(不具合修正): 日付欄はページ読み込み時に1回だけtodayLocalISODate()を
+  // セットするため、サイドパネルを開いたまま日付をまたぐと古い日付が残ってしまう
+  // (ユーザー指摘)。保存時、この欄が読み込み時の値のまま変更されていなければ、
+  // 実際の「今日」へ自動で補正する(ユーザーが意図的に別の日付へ変更した場合は尊重する)。
+  let autoSetDate = todayLocalISODate();
+  journalDateEl.value = autoSetDate;
 
   function renderJournalList(entries) {
     journalListEl.innerHTML = "";
@@ -116,9 +121,15 @@
       setStatus("貼り付け内容が空です", "error");
       return;
     }
+    const realToday = todayLocalISODate();
+    if (journalDateEl.value === autoSetDate && autoSetDate !== realToday) {
+      // 日付欄が未編集のまま日をまたいでいたので、実際の今日へ補正する。
+      autoSetDate = realToday;
+      journalDateEl.value = realToday;
+    }
     const entry = {
       id: `${Date.now()}`,
-      date: journalDateEl.value || todayLocalISODate(),
+      date: journalDateEl.value || realToday,
       rawTranscript: transcript,
       createdAt: Date.now(),
       analyzed: false,
