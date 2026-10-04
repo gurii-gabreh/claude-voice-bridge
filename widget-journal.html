@@ -29,7 +29,7 @@
     resize: vertical;
     margin-bottom: 6px;
   }
-  #copy-gem-prompt-btn, #save-journal-btn {
+  #copy-gem-prompt-btn, #save-journal-btn, #copy-handoff-btn {
     font-size: 11px;
     font-family: inherit;
     font-weight: 700;
@@ -40,7 +40,29 @@
     color: var(--accent);
     cursor: pointer;
   }
-  #copy-gem-prompt-btn:hover, #save-journal-btn:hover { border-color: var(--accent); }
+  #copy-gem-prompt-btn:hover, #save-journal-btn:hover, #copy-handoff-btn:hover { border-color: var(--accent); }
+  #claude-handoff {
+    margin-top: 10px;
+    padding: 8px;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+  }
+  #claude-handoff-note { font-size: 11px; color: var(--ink-soft); line-height: 1.6; margin: 0 0 6px; }
+  #claude-handoff-text {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 110px;
+    padding: 8px;
+    font-size: 11.5px;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 6px;
+  }
   #journal-date {
     width: 100%;
     box-sizing: border-box;
@@ -108,6 +130,12 @@
   <textarea id="journal-transcript" placeholder="Gemini Liveのトランスクリプトをそのまま貼り付け"></textarea>
   <button id="save-journal-btn" type="button">💾 保存</button>
   <div id="widget-status"></div>
+
+  <div id="claude-handoff" style="display:none;">
+    <p id="claude-handoff-note">保存しました。下の内容をコピーして<strong>Claude Code</strong>のチャットに貼り付け、「分析して」のように依頼してください。分析・記録が完了するまで少々お待ちください(mirai-journal側のdata/journals.json・data/profile.jsonへ記録されます)。</p>
+    <textarea id="claude-handoff-text" readonly></textarea>
+    <button id="copy-handoff-btn" type="button">📋 Claudeへの依頼文をコピー</button>
+  </div>
 
   <div class="journal-section-title">📖 過去のジャーナル</div>
   <div id="journal-list"></div>

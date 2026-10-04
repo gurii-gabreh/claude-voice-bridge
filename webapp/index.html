@@ -503,6 +503,15 @@
       <div id="journal-status"></div>
     </section>
 
+    <section id="claude-handoff" style="display:none;">
+      <div class="section-title">➡️ 次にやること</div>
+      <p class="sub" id="claude-handoff-note" style="margin-bottom:6px;">保存しました。下の内容をコピーして<strong>Claude Code</strong>のチャットに貼り付け、「分析して」のように依頼してください。分析・記録が完了するまで少々お待ちください(mirai-journal側のdata/journals.json・data/profile.jsonへ記録されます)。</p>
+      <textarea id="claude-handoff-text" rows="8" readonly></textarea>
+      <div class="btn-row">
+        <button id="copy-handoff-btn" type="button">📋 Claudeへの依頼文をコピー</button>
+      </div>
+    </section>
+
     <section>
       <div class="section-title">📖 過去のジャーナル</div>
       <div id="journal-list"></div>
@@ -1000,6 +1009,9 @@
   const journalStatusEl = document.getElementById("journal-status");
   const journalListEl = document.getElementById("journal-list");
   const journalEmptyEl = document.getElementById("journal-empty");
+  const claudeHandoffEl = document.getElementById("claude-handoff");
+  const claudeHandoffTextEl = document.getElementById("claude-handoff-text");
+  const copyHandoffBtn = document.getElementById("copy-handoff-btn");
 
   gemPromptEl.value = GEM_PROMPT_TEXT;
   copyGemPromptBtn.addEventListener("click", () => copyToClipboard(GEM_PROMPT_TEXT, copyGemPromptBtn));
@@ -1071,6 +1083,7 @@
       const json = await res.json();
       if (json.status === "ok") {
         journalStatusEl.textContent = "保存しました";
+        showClaudeHandoff(entry);
         journalTranscriptEl.value = "";
         journalHistoryLoaded = true;
         loadJournalHistory();
@@ -1081,6 +1094,20 @@
       journalStatusEl.textContent = "通信エラー(保存失敗): " + e.message;
     }
   });
+
+  function showClaudeHandoff(entry) {
+    if (!claudeHandoffEl || !claudeHandoffTextEl) return;
+    const handoffText =
+      "【ジャーナル面談】この内容を分析して、mirai-journalのdata/journals.json・data/profile.jsonへ記録してください。\n\n" +
+      `日付: ${entry.date}\n\n` +
+      entry.rawTranscript;
+    claudeHandoffTextEl.value = handoffText;
+    claudeHandoffEl.style.display = "block";
+  }
+
+  if (copyHandoffBtn) {
+    copyHandoffBtn.addEventListener("click", () => copyToClipboard(claudeHandoffTextEl.value, copyHandoffBtn));
+  }
 </script>
 </body>
 </html>

@@ -50,6 +50,9 @@
   const journalEmptyEl = document.getElementById("journal-empty");
   const statusEl = document.getElementById("widget-status");
   const setStatus = makeStatusSetter(statusEl);
+  const claudeHandoffEl = document.getElementById("claude-handoff");
+  const claudeHandoffTextEl = document.getElementById("claude-handoff-text");
+  const copyHandoffBtn = document.getElementById("copy-handoff-btn");
 
   gemPromptEl.value = GEM_PROMPT_TEXT;
 
@@ -129,6 +132,7 @@
       const json = await res.json();
       if (json.status === "ok") {
         setStatus("保存しました");
+        showClaudeHandoff(entry);
         journalTranscriptEl.value = "";
         loadJournalHistory();
       } else {
@@ -138,6 +142,30 @@
       setStatus("通信エラー(保存失敗): " + e.message, "error");
     }
   });
+
+  function showClaudeHandoff(entry) {
+    if (!claudeHandoffEl || !claudeHandoffTextEl) return;
+    const handoffText =
+      "【ジャーナル面談】この内容を分析して、mirai-journalのdata/journals.json・data/profile.jsonへ記録してください。\n\n" +
+      `日付: ${entry.date}\n\n` +
+      entry.rawTranscript;
+    claudeHandoffTextEl.value = handoffText;
+    claudeHandoffEl.style.display = "block";
+    reportHeightToParent();
+  }
+
+  if (copyHandoffBtn) {
+    copyHandoffBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(claudeHandoffTextEl.value);
+        const original = copyHandoffBtn.textContent;
+        copyHandoffBtn.textContent = "コピーしました";
+        setTimeout(() => { copyHandoffBtn.textContent = original; }, 1200);
+      } catch (e) {
+        setStatus("コピーに失敗しました: " + e.message, "error");
+      }
+    });
+  }
 
   loadJournalHistory();
   reportHeightToParent();
