@@ -1,8 +1,8 @@
 {
   "items": [
     {
-      "createdAt": 1791131456377,
-      "id": 2,
+      "createdAt": 1791131494219,
+      "id": 3,
       "kind": "相談",
       "quote": "再発防止策(日次Routineへの差分チェック組み込み・claude-core-rules.mdへのルール追記)を実装してよいですか?",
       "repo": "不明",
