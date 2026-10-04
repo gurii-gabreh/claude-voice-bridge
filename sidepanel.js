@@ -405,19 +405,24 @@
       }
       let json = await res.json();
       let items = json.items || [];
-      // 2026-09-26追加: README既知の制約(「☁️ 同期」直後に「📥 読み込み」を行うと、
-      // raw.githubusercontent.com側への反映の遅れでごく稀に空として読み込まれる)への
-      // 対策。抽出→同期→読み込みを自動で数珠つなぎにしたことで、この「同期直後の
-      // 読み込み」が毎回発生するようになったため、空だった場合のみ2秒待って
-      // 1回だけ再取得する(手動で「📥」を単独で押した場合も同じ経路を通るため安全)。
+      // 2026-09-26追加、2026-10-05強化: README既知の制約(「☁️ 同期」直後に「📥 読み込み」を
+      // 行うと、raw.githubusercontent.com側への反映の遅れでごく稀に空として読み込まれる)への
+      // 対策。当初は「2秒待って1回だけ再取得」だったが、手順通り各ステップの完了表示を
+      // 待ってから進めても空になる事例が報告されたため、反映遅延がそれより長いケースが
+      // あると判断し、2秒・4秒・6秒と間隔を空けながら最大3回まで再取得するよう強化した
+      // (手動で「📥」を単独で押した場合も同じ経路を通るため安全)。
       if (items.length === 0) {
-        await new Promise((r) => setTimeout(r, 2000));
-        const retryRes = await fetch(`${TRACKER_JSON_RAW_URL}?t=${Date.now()}`, { cache: "no-store" });
-        if (retryRes.ok) {
-          const retryJson = await retryRes.json();
-          if ((retryJson.items || []).length > 0) {
-            json = retryJson;
-            items = retryJson.items;
+        const retryDelaysMs = [2000, 4000, 6000];
+        for (let i = 0; i < retryDelaysMs.length && items.length === 0; i++) {
+          setStatus(`GitHub上のJSONを読み込み中…(反映待ち、再試行${i + 1}/${retryDelaysMs.length})`);
+          await new Promise((r) => setTimeout(r, retryDelaysMs[i]));
+          const retryRes = await fetch(`${TRACKER_JSON_RAW_URL}?t=${Date.now()}`, { cache: "no-store" });
+          if (retryRes.ok) {
+            const retryJson = await retryRes.json();
+            if ((retryJson.items || []).length > 0) {
+              json = retryJson;
+              items = retryJson.items;
+            }
           }
         }
       }
