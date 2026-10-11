@@ -29,9 +29,11 @@
   const panelTabVoiceBtn = document.getElementById("panel-tab-voice");
   const panelTabListBtn = document.getElementById("panel-tab-list");
   const panelTabDesignBtn = document.getElementById("panel-tab-design");
+  const panelTabPromptBtn = document.getElementById("panel-tab-prompt");
   const voiceModePanelEl = document.getElementById("voice-mode-panel");
   const listModePanelEl = document.getElementById("list-mode-panel");
   const designModePanelEl = document.getElementById("design-mode-panel");
+  const promptModePanelEl = document.getElementById("prompt-mode-panel");
   const actionRowEl = document.getElementById("action-row-wrap");
   const rateSliderEl = document.getElementById("rate-slider");
   const rateValueEl = document.getElementById("rate-value");
@@ -109,23 +111,27 @@
     const isVoice = panel === "voice";
     const isList = panel === "list";
     const isDesign = panel === "design";
+    const isPrompt = panel === "prompt";
     panelTabVoiceBtn.classList.toggle("active", isVoice);
     panelTabListBtn.classList.toggle("active", isList);
     panelTabDesignBtn.classList.toggle("active", isDesign);
+    panelTabPromptBtn.classList.toggle("active", isPrompt);
     voiceModePanelEl.style.display = isVoice ? "flex" : "none";
     listModePanelEl.style.display = isList ? "flex" : "none";
     designModePanelEl.style.display = isDesign ? "flex" : "none";
+    promptModePanelEl.style.display = isPrompt ? "flex" : "none";
     // 2026-09-27変更、ユーザー指示「タスク更新ボタンは処理ログの上に表示にして」:
     // #action-rowを#list-mode-panelの外(処理ログより上の共通領域)へ移したため、
     // 表示/非表示はここで一覧モードかどうかに応じて切り替える。カード枠(#action-row-wrap)
     // ごと切り替えるため、中の#action-rowはCSS側で常時flexのままにしてある。
-    // 基本設計モードは抽出/同期/読込のいずれとも無関係のため、一覧モードの時だけ表示。
+    // 基本設計・プロンプト生成モードは抽出/同期/読込のいずれとも無関係のため、一覧モードの時だけ表示。
     actionRowEl.style.display = isList ? "block" : "none";
     chrome.storage.local.set({ cvb_panel_mode: panel });
   }
   panelTabVoiceBtn.addEventListener("click", () => setPanelMode("voice"));
   panelTabListBtn.addEventListener("click", () => setPanelMode("list"));
   panelTabDesignBtn.addEventListener("click", () => setPanelMode("design"));
+  panelTabPromptBtn.addEventListener("click", () => setPanelMode("prompt"));
 
   // ---- 最上位タブ(AI開発情報一覧 / ジャーナル面談) ----
   // 2026-09-27追加(CVB-002)、ユーザー指示「一番上にタブを作り、AI開発情報一覧と
@@ -1144,7 +1150,7 @@
     // 初回起動(cvb_panel_mode未設定)時のデフォルトをボイスから一覧へ変更。
     // 2026-09-27追加: 「📐 基本設計」モード追加に伴い、有効な3値のいずれかを
     // そのまま復元し、未設定・不正値の場合のみ一覧をデフォルトにする。
-    const validModes = ["voice", "list", "design"];
+    const validModes = ["voice", "list", "design", "prompt"];
     setPanelMode(validModes.includes(stored.cvb_panel_mode) ? stored.cvb_panel_mode : "list");
     // 2026-09-27追加(CVB-002): 最上位タブ(AI開発情報一覧/ジャーナル面談)も同様に復元。
     setTopTab(stored.cvb_top_tab === "journal" ? "journal" : "info");

@@ -609,6 +609,13 @@
          claude-voice-bridge自身の等価タブ。requirements.jsonをそのまま
          ビューアー表示するだけ(widget-design.html)。 -->
     <button class="panel-tab" id="panel-tab-design" type="button">📐 基本設計</button>
+    <!-- 2026-10-11追加、manager-roomでの構想「PROMPT-MANAGERをclaude-voice-bridgeに
+         表示統合したい」への対応。PROMPT-MANAGER(gurii-gabreh/prompt-manager、GitHub
+         Pages)自体のUIを一切複製せず、既存の公開ページをそのままiframeで表示するだけ。
+         他のウィジェット(widget-design.html等)と違い、同一リポジトリ内のファイルではなく
+         外部オリジンを直接iframe表示する初めてのケースのため、専用のwidget-*.htmlは
+         作らず#prompt-mode-panel直下にiframeを置くだけの最小構成にしている。 -->
+    <button class="panel-tab" id="panel-tab-prompt" type="button">✨ プロンプト生成</button>
   </div>
 
   <!-- 2026-09-27変更、ユーザー指示「タスク更新ボタンは処理ログの上に表示にして」:
@@ -688,6 +695,20 @@
       <div class="section-eyebrow">アプリ基本設計</div>
       <div class="section-title">📐 新規相談時の標準10項目・懸念点照合</div>
       <iframe id="design-widget-frame" class="widget-frame" src="widget-design.html" title="アプリ基本設計"></iframe>
+    </div>
+  </div>
+
+  <!-- 2026-10-11追加。PROMPT-MANAGER(gurii-gabreh/prompt-manager、GitHub Pages)の
+       既存ページをそのままiframeで表示する。データの正本・生成処理はすべてPROMPT-MANAGER
+       側(Googleスプレッドシート+GAS)にあり、claude-voice-bridge側は表示枠を提供するだけ。
+       高さ自動調整(postMessage)は未対応のため、固定の大きめ高さ+内部スクロールにしている
+       (PROMPT-MANAGER側がwidget-common.jsのreportHeightToParentを呼ぶ仕組みを
+       持っていないため。将来PROMPT-MANAGER側に対応を追加すれば自動調整できる)。 -->
+  <div id="prompt-mode-panel" style="display:none;">
+    <div id="prompt-section">
+      <div class="section-eyebrow">プロンプト生成</div>
+      <div class="section-title">✨ PROMPT-MANAGER</div>
+      <iframe id="prompt-widget-frame" class="widget-frame" src="https://gurii-gabreh.github.io/prompt-manager/" title="プロンプト生成(PROMPT-MANAGER)" style="height:600px;"></iframe>
     </div>
   </div>
 
