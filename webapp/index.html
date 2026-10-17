@@ -704,6 +704,16 @@
   // 改行分割ではなくグローバル正規表現で全件抽出する方式)。room-task-auditの
   // 出力をMarkdownとして描画・textContent抽出すると<li>間に改行が入らず複数件が
   // 1行に連結されることがあるため、改行の有無に依存しない実装にしている。
+  // 2026-10-17修正(不具合対応、sidepanel.jsと同じ修正をこちらにも適用): 引用
+  // フィールドを直線二重引用符"(.*?)"固定で区切っていたため、claude.aiの
+  // Markdown描画がタイポグラフィ変換で直線引用符を曲線引用符(""")へ置き換えると
+  // このリテラルが一致せず、内容側の遅延マッチが次項目以降まで伸び続けて複数項目が
+  // 1項目に併合される不具合があった。区切りを引用符ではなく次の「|」(不確実の前)に
+  // 変更し、前後の引用符はstripQuotes()で取り除く。
+  function stripQuotes(s) {
+    return (s || "").trim().replace(/^["'“‘]+|["'”’]+$/g, "");
+  }
+
   function parseAuditResponse(text) {
     const block = (text || "").match(/\[ROOM-TASK-AUDIT-START\]([\s\S]*?)\[ROOM-TASK-AUDIT-END\]/);
     if (!block) return null;
@@ -712,7 +722,7 @@
     // 2026-09-27追加、ユーザー指示: manager-room上では複数アプリの話がランダムに出るため、
     // room-task-auditが「リポジトリ」フィールドを付与する(sidepanel.jsと同じ仕様)。
     // 旧形式(このフィールドが無い監査結果)との後方互換のため任意(?:...)?にしている。
-    const itemRe = /種別:\s*(相談|未完了作業)\s*\|\s*(?:リポジトリ:\s*(.+?)\s*\|\s*)?内容:\s*(.+?)\s*\|\s*引用:\s*"(.*?)"\s*\|\s*不確実:\s*(はい|いいえ)/g;
+    const itemRe = /種別:\s*(相談|未完了作業)\s*\|\s*(?:リポジトリ:\s*(.+?)\s*\|\s*)?内容:\s*(.+?)\s*\|\s*引用:\s*(.+?)\s*\|\s*不確実:\s*(はい|いいえ)/g;
     const items = [];
     let m;
     while ((m = itemRe.exec(body)) !== null) {
@@ -720,7 +730,7 @@
         kind: m[1],
         repo: m[2] ? m[2].trim() : null,
         summary: m[3].trim(),
-        quote: m[4],
+        quote: stripQuotes(m[4]),
         uncertain: m[5] === "はい",
       });
     }
