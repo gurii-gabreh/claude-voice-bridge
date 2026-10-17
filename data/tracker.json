@@ -1,20 +1,84 @@
 {
   "items": [
     {
-      "createdAt": 1791589457903,
-      "id": 2,
-      "kind": "相談",
-      "quote": "連携モジュール」(「+」で始まるレポート帳/単語帳転記の指示)",
-      "repo": "English-Speaking-App",
+      "createdAt": 1792210091219,
+      "id": 1,
+      "kind": "未完了作業",
+      "quote": "PTD-072: ServiceNow収集フロー図のレイアウト微調整",
+      "repo": "servicenow-sub-agent",
       "source": {
         "mode": "claude",
         "title": "Claude Code",
         "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
       },
       "status": "active",
-      "summary": "ESA-002完了報告時に指摘した、プロンプト内「連携モジュール」(レポート帳/単語帳転記用の「+」コマンド)の記述がレポート帳廃止後も残存している件への対応方針が未確認 【タスクID:回答10/10 08:43:10-1】",
-      "taskIdMarker": "回答10/10 08:43:10-1",
+      "summary": "PTD-072(ServiceNow収集フロー図のレイアウト微調整)は保留中、再開指示待ち 【タスクID:回答10/17 12:14:44-1】",
+      "taskIdMarker": "回答10/17 12:14:44-1",
+      "uncertain": false
+    },
+    {
+      "createdAt": 1792210091219,
+      "id": 2,
+      "kind": "未完了作業",
+      "quote": "research-items.jsonの日本語要約バックフィル(残り約2,340件)",
+      "repo": "servicenow-sub-agent",
+      "source": {
+        "mode": "claude",
+        "title": "Claude Code",
+        "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
+      },
+      "status": "active",
+      "summary": "PTD-058残り約2,340件の要約バックフィルとGitHub Pages Source設定(ユーザー作業)が未完了 【タスクID:回答10/17 12:14:44-2】",
+      "taskIdMarker": "回答10/17 12:14:44-2",
+      "uncertain": false
+    },
+    {
+      "createdAt": 1792210091219,
+      "id": 3,
+      "kind": "未完了作業",
+      "quote": "iframeの高さが固定600pxのまま(自動調整未対応)",
+      "repo": "複数",
+      "source": {
+        "mode": "claude",
+        "title": "Claude Code",
+        "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
+      },
+      "status": "active",
+      "summary": "PMG-001(PROMPT-MANAGER×claude-voice-bridge統合)が対応中、iframe高さ自動調整・生成履歴JSON化・質問ウィザードの扱いが未対応 【タスクID:回答10/17 12:14:44-3】",
+      "taskIdMarker": "回答10/17 12:14:44-3",
+      "uncertain": false
+    },
+    {
+      "createdAt": 1792210091219,
+      "id": 4,
+      "kind": "相談",
+      "quote": "これ、そうするとclaude codeモードとcodexモードを作ればいいだけだよね？",
+      "repo": "claude-voice-bridge",
+      "source": {
+        "mode": "claude",
+        "title": "Claude Code",
+        "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
+      },
+      "status": "active",
+      "summary": "サイドアプリのタスク抽出をCodex画面上でも使う案で、DOM selector調査と出力形式信頼性のどちらを先に調べるか未回答 【タスクID:回答10/17 12:14:44-4】",
+      "taskIdMarker": "回答10/17 12:14:44-4",
       "uncertain": true
+    },
+    {
+      "createdAt": 1792210091219,
+      "id": 5,
+      "kind": "相談",
+      "quote": "もう一度タスク抽出ボタンを試してもらえるか",
+      "repo": "claude-voice-bridge",
+      "source": {
+        "mode": "claude",
+        "title": "Claude Code",
+        "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg"
+      },
+      "status": "active",
+      "summary": "複数タスク併合バグ(PTD-078)を修正したので、再度タスク抽出ボタンで直っているか確認してほしいと依頼、未回答 【タスクID:回答10/17 13:07:59-1】",
+      "taskIdMarker": "回答10/17 13:07:59-1",
+      "uncertain": false
     }
   ]
 }
