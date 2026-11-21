@@ -41,6 +41,8 @@
   const infoModalBtn = document.getElementById("info-modal-btn");
   const infoModalOverlayEl = document.getElementById("info-modal-overlay");
   const infoModalCloseBtn = document.getElementById("info-modal-close");
+  const topTabCommandsBtn = document.getElementById("top-tab-commands");
+  const topViewCommandsEl = document.getElementById("top-view-commands");
   const topTabInfoBtn = document.getElementById("top-tab-info");
   const topTabJournalBtn = document.getElementById("top-tab-journal");
   const topViewInfoEl = document.getElementById("top-view-info");
@@ -108,6 +110,9 @@
   // 切り替えられるようにしろ」。2026-09-27追加、Knowledge-Dashboard版に続く
   // claude-voice-bridge自身の「📐 基本設計」タブを3つ目のモードとして追加。
   function setPanelMode(panel) {
+    // 2026-11-21: タスク抽出(一覧)は非表示にしたため、一覧が指定されたらボイスへ切り替える
+    // (以前の起動時に「一覧」を最後に開いていた場合の保存値にも対応)。
+    if (panel === "list") panel = "voice";
     const isVoice = panel === "voice";
     const isList = panel === "list";
     const isDesign = panel === "design";
@@ -125,7 +130,8 @@
     // 表示/非表示はここで一覧モードかどうかに応じて切り替える。カード枠(#action-row-wrap)
     // ごと切り替えるため、中の#action-rowはCSS側で常時flexのままにしてある。
     // 基本設計・プロンプト生成モードは抽出/同期/読込のいずれとも無関係のため、一覧モードの時だけ表示。
-    actionRowEl.style.display = isList ? "block" : "none";
+    // 2026-11-21: タスク抽出のボタン列は常に非表示(処理は残す)。
+    actionRowEl.style.display = "none";
     chrome.storage.local.set({ cvb_panel_mode: panel });
   }
   panelTabVoiceBtn.addEventListener("click", () => setPanelMode("voice"));
@@ -137,14 +143,20 @@
   // 2026-09-27追加(CVB-002)、ユーザー指示「一番上にタブを作り、AI開発情報一覧と
   // ジャーナル面談で分ける構成にしたい」。上のsetPanelMode()(一覧/ボイス/基本設計)は
   // 「AI開発情報一覧」タブの中の、もう1階層下のタブとしてそのまま残る。
+  // 2026-11-21変更: 「⌨️ コマンド一覧」(commands)を左端に追加し、3タブ構成にした。
   function setTopTab(tab) {
+    const isCommands = tab === "commands";
     const isInfo = tab === "info";
+    const isJournal = tab === "journal";
+    topTabCommandsBtn.classList.toggle("active", isCommands);
     topTabInfoBtn.classList.toggle("active", isInfo);
-    topTabJournalBtn.classList.toggle("active", !isInfo);
+    topTabJournalBtn.classList.toggle("active", isJournal);
+    topViewCommandsEl.style.display = isCommands ? "flex" : "none";
     topViewInfoEl.style.display = isInfo ? "flex" : "none";
-    topViewJournalEl.style.display = isInfo ? "none" : "flex";
+    topViewJournalEl.style.display = isJournal ? "flex" : "none";
     chrome.storage.local.set({ cvb_top_tab: tab });
   }
+  topTabCommandsBtn.addEventListener("click", () => setTopTab("commands"));
   topTabInfoBtn.addEventListener("click", () => setTopTab("info"));
   topTabJournalBtn.addEventListener("click", () => setTopTab("journal"));
 
@@ -480,6 +492,28 @@
   }
   // 2026-09-27変更、ユーザー指示「３番目のボタンも同様の表示でよい」: 読込の完了を
   // 待たず、クリックした時点で最初の抽出ボタンへ戻す(一連の更新はここで一周する)。
+  // 2026-11-21追加: 定例文(data/templates.json)だけを読み込む。⌨️コマンド一覧タブのボタン用。
+  // 処理内容はloadTrackerJsonAndTemplates()の定例文部分と同じ。
+  const commandsStatusEl = document.getElementById("commands-status");
+  async function loadTemplatesOnly() {
+    commandsStatusEl.textContent = "読み込み中…";
+    try {
+      const tRes = await fetch(`${TEMPLATES_JSON_RAW_URL}?t=${Date.now()}`, { cache: "no-store" });
+      if (!tRes.ok) { commandsStatusEl.textContent = `読み込みに失敗しました(HTTP ${tRes.status})`; return false; }
+      const tJson = await tRes.json();
+      if (!Array.isArray(tJson.templates) || !tJson.templates.length) { commandsStatusEl.textContent = "定例文が空でした(変更なし)"; return false; }
+      await chrome.storage.local.set({ cvb_templates: tJson.templates });
+      phraseEditorEl.value = templatesToText(tJson.templates);
+      commandsStatusEl.textContent = `最新の定例文を読み込みました(${tJson.templates.length}件)`;
+      return true;
+    } catch (e) {
+      console.log("[cvb-panel] 定例文JSONの読み込みに失敗:", e);
+      commandsStatusEl.textContent = "読み込みに失敗しました(通信エラー)";
+      return false;
+    }
+  }
+  document.getElementById("load-templates-json-btn").addEventListener("click", loadTemplatesOnly);
+
   loadTrackerJsonBtn.addEventListener("click", () => {
     showUpdateStep("extract");
     loadTrackerJsonAndTemplates();
@@ -1166,9 +1200,10 @@
     // 2026-09-27追加: 「📐 基本設計」モード追加に伴い、有効な3値のいずれかを
     // そのまま復元し、未設定・不正値の場合のみ一覧をデフォルトにする。
     const validModes = ["voice", "list", "design", "prompt"];
-    setPanelMode(validModes.includes(stored.cvb_panel_mode) ? stored.cvb_panel_mode : "list");
+    setPanelMode(validModes.includes(stored.cvb_panel_mode) ? stored.cvb_panel_mode : "voice");
     // 2026-09-27追加(CVB-002): 最上位タブ(AI開発情報一覧/ジャーナル面談)も同様に復元。
-    setTopTab(stored.cvb_top_tab === "journal" ? "journal" : "info");
+    // 2026-11-21変更: 開いた時は常に⌨️コマンド一覧を最初に表示する(ユーザー選択)。
+    setTopTab("commands");
     showUpdateStep("extract"); // 起動時は常に最初のステップから
 
     // 2026-09-27変更: このページ自体はもうタスク一覧を描画しない(widget-tasks.html側の

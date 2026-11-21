@@ -106,7 +106,7 @@
     gap: 8px;
     flex-wrap: wrap;
   }
-  #extract-room-btn, #sync-github-btn, #load-tracker-json-btn {
+  #extract-room-btn, #sync-github-btn, #load-tracker-json-btn, #load-templates-json-btn {
     font-size: 11px;
     font-family: inherit;
     font-weight: 700;
@@ -117,7 +117,7 @@
     color: #05141a;
     cursor: pointer;
   }
-  #extract-room-btn:hover, #sync-github-btn:hover, #load-tracker-json-btn:hover {
+  #extract-room-btn:hover, #sync-github-btn:hover, #load-tracker-json-btn:hover, #load-templates-json-btn:hover {
     filter: brightness(1.1);
   }
   .mode-btn {
@@ -472,7 +472,7 @@
   }
   .top-tab-btn:hover { color: var(--ink); }
   .top-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-  #top-view-info, #top-view-journal {
+  #top-view-commands, #top-view-info, #top-view-journal {
     width: 100%;
     display: flex;
     flex-direction: column;
@@ -594,17 +594,66 @@
        定例文/スキル呼び出し文言/手動セレクタ設定)は#top-view-info配下にまとめて
        残し、新規の#top-view-journalを並べた。 -->
   <div id="top-tab-row">
-    <button type="button" class="top-tab-btn active" id="top-tab-info">📋 AI開発情報一覧</button>
+    <!-- 2026-11-21追加、ユーザー指示「AI開発情報一覧の左にタブを作り、コマンド一覧を追加して、
+         そこに今の📌定例文…を表示、後スキル呼び出し文言も」。開いた時はこのタブを最初に表示する
+         (ユーザー選択)。 -->
+    <button type="button" class="top-tab-btn active" id="top-tab-commands">⌨️ コマンド一覧</button>
+    <button type="button" class="top-tab-btn" id="top-tab-info">📋 AI開発情報一覧</button>
     <button type="button" class="top-tab-btn" id="top-tab-journal">📓 ジャーナル面談</button>
   </div>
 
-  <div id="top-view-info">
+  <!-- 2026-11-21追加: ⌨️コマンド一覧タブ。📌定例文・🔧スキル呼び出し文言を#top-view-infoから
+       ここへ移動した(中身のウィジェット・編集欄はそのまま)。定例文の読み込みは、これまで
+       タスク抽出の3ステップ目「📥 JSONから一覧を読み込む」と一体だったが、タスク抽出を非表示に
+       したため、定例文(data/templates.json)だけを読み込むボタンをここに置いた。 -->
+  <div id="top-view-commands">
+    <div id="commands-load-row" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 8px;">
+      <button id="load-templates-json-btn" type="button" title="GitHub上のdata/templates.jsonから、定例文とスキル呼び出し文言を最新にします">📥 最新の定例文を読み込む</button>
+      <span id="commands-status" style="font-size:11px;color:var(--ink-soft)"></span>
+    </div>
+  <div id="phrases-section">
+    <details class="collapsible-block">
+      <summary class="collapsible-summary">📌 定例文(押すと入力欄に反映、送信は自分で押す)</summary>
+      <div class="collapsible-body">
+        <!-- 2026-09-27追加、ユーザー指示「スキル呼び出し文言と定例文も同じ様にウィジェット管理として」:
+             ボタン一覧の表示・クリック挿入はwidget-phrases.htmlへ切り出し、iframeで呼び出す。
+             編集(下のtextarea+保存)はこれまで通りこのページ側に残す。 -->
+        <iframe id="phrases-widget-frame" class="widget-frame" src="widget-phrases.html" title="定例文"></iframe>
+        <details>
+          <summary>定例文を編集</summary>
+          <p style="margin:6px 0;font-size:11px;color:var(--ink-soft)">
+            1つのテンプレート = 1行目がボタンの名前、2行目以降が実際に入力欄へ反映される本文(複数行OK)。
+            テンプレート同士は「---」だけの行で区切ってください。
+          </p>
+          <textarea id="phrase-editor" rows="10" placeholder="ボタン名1
+本文1行目
+本文2行目
+---
+ボタン名2
+本文(長文もOK)"></textarea>
+          <button id="phrase-save">保存</button>
+        </details>
+      </div>
+    </details>
+    <details class="collapsible-block">
+      <summary class="collapsible-summary">🔧 スキル呼び出し文言(押すと入力欄に反映)</summary>
+      <div class="collapsible-body">
+        <iframe id="skill-phrases-widget-frame" class="widget-frame" src="widget-skill-phrases.html" title="スキル呼び出し文言"></iframe>
+      </div>
+    </details>
+  </div>
+
+  </div><!-- /#top-view-commands -->
+
+  <div id="top-view-info" style="display:none;">
 
   <div id="panel-tabs">
     <!-- 2026-09-27変更、ユーザー指示「ボイスと一覧の位置を左右変えて、左側に一覧を設けて」 -->
     <!-- 2026-09-27変更、ユーザー指示「defaultは一覧側を押している状態にして」 -->
-    <button class="panel-tab active" id="panel-tab-list" type="button">📋 一覧</button>
-    <button class="panel-tab" id="panel-tab-voice" type="button">🎙️ ボイス</button>
+    <!-- 2026-11-21: タスク抽出(📋一覧)は非表示。処理(sidepanel.js・widget-tasks.html等)は今後の参考に残す。
+         Claude Codeのルームは右の「計画」+深夜のtasks.json一括記録で代替(ユーザー指示)。 -->
+    <button class="panel-tab" id="panel-tab-list" type="button" style="display:none;">📋 一覧</button>
+    <button class="panel-tab active" id="panel-tab-voice" type="button">🎙️ ボイス</button>
     <!-- 2026-09-27追加: Knowledge-Dashboard版と同じ「📐 アプリ基本設計」の
          claude-voice-bridge自身の等価タブ。requirements.jsonをそのまま
          ビューアー表示するだけ(widget-design.html)。 -->
@@ -622,7 +671,7 @@
        一覧モードでのみ使うボタン列だが、表示位置は処理ログより上にしたいとの指示のため
        #list-mode-panelの外(共通領域)へ出した。一覧モードの時だけ表示されるよう、
        sidepanel.jsのsetPanelMode()側でdisplayを切り替える。 -->
-  <div id="action-row-wrap">
+  <div id="action-row-wrap" style="display:none;">
     <div id="action-row-label">タスク一覧の更新操作</div>
     <div id="action-row">
       <button id="extract-room-btn" type="button" title="ルームの抽出→GitHubへ同期→GitHubから読み込みを、1ステップずつボタンで進めます。抽出がうまくいかなかった場合は、途中からでもこのボタンを押し直せます">🔍 タスク一覧を抽出</button>
@@ -673,7 +722,7 @@
     </div>
   </div>
 
-  <div id="list-mode-panel">
+  <div id="list-mode-panel" style="display:none;">
     <!-- 2026-09-27変更、ユーザー指示「管理方法は右上のボタンからモーダルで表示」:
          「❓使用方法」「📦タスク一覧のJSON管理方法」の純粋な読み物2つは#info-modal
          (header-row内のℹ️ボタン)へ移動した。実際の操作ウィジェットを含む
@@ -710,38 +759,6 @@
       <div class="section-title">✨ PROMPT-MANAGER</div>
       <iframe id="prompt-widget-frame" class="widget-frame" src="https://gurii-gabreh.github.io/prompt-manager/" title="プロンプト生成(PROMPT-MANAGER)" style="height:600px;"></iframe>
     </div>
-  </div>
-
-  <div id="phrases-section">
-    <details class="collapsible-block">
-      <summary class="collapsible-summary">📌 定例文(押すと入力欄に反映、送信は自分で押す)</summary>
-      <div class="collapsible-body">
-        <!-- 2026-09-27追加、ユーザー指示「スキル呼び出し文言と定例文も同じ様にウィジェット管理として」:
-             ボタン一覧の表示・クリック挿入はwidget-phrases.htmlへ切り出し、iframeで呼び出す。
-             編集(下のtextarea+保存)はこれまで通りこのページ側に残す。 -->
-        <iframe id="phrases-widget-frame" class="widget-frame" src="widget-phrases.html" title="定例文"></iframe>
-        <details>
-          <summary>定例文を編集</summary>
-          <p style="margin:6px 0;font-size:11px;color:var(--ink-soft)">
-            1つのテンプレート = 1行目がボタンの名前、2行目以降が実際に入力欄へ反映される本文(複数行OK)。
-            テンプレート同士は「---」だけの行で区切ってください。
-          </p>
-          <textarea id="phrase-editor" rows="10" placeholder="ボタン名1
-本文1行目
-本文2行目
----
-ボタン名2
-本文(長文もOK)"></textarea>
-          <button id="phrase-save">保存</button>
-        </details>
-      </div>
-    </details>
-    <details class="collapsible-block">
-      <summary class="collapsible-summary">🔧 スキル呼び出し文言(押すと入力欄に反映)</summary>
-      <div class="collapsible-body">
-        <iframe id="skill-phrases-widget-frame" class="widget-frame" src="widget-skill-phrases.html" title="スキル呼び出し文言"></iframe>
-      </div>
-    </details>
   </div>
 
   <details>

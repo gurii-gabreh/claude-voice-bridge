@@ -438,7 +438,9 @@
     </div>
   </details>
 
-  <section>
+  <!-- 2026-11-21: タスク抽出(room-task-audit)の貼り付け欄は非表示(ユーザー指示)。処理は今後の参考に残す。
+       Claude Codeのルームは右の「計画」+深夜のtasks.json一括記録で代替。 -->
+  <section style="display:none;">
     <div class="section-title">📝 room-task-auditの出力を貼り付けて反映</div>
     <p class="sub" style="margin-bottom:6px;">claude.aiのモバイルアプリ/サイト上で直接「【ルームタスク抽出】room-task-auditスキルを呼び出して実行してください。」と送り、返ってきた回答全文(<code>[ROOM-TASK-AUDIT-START]〜[ROOM-TASK-AUDIT-END]</code>を含む)をそのまま貼り付けてください。</p>
     <textarea id="paste-audit" placeholder="[ROOM-TASK-AUDIT-START]&#10;…&#10;[ROOM-TASK-AUDIT-END]"></textarea>
