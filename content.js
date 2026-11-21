@@ -352,6 +352,27 @@
   }
 
   // サイドパネルからのメッセージを受ける
+  // 2026-11-21追加(CVB-004): Claude Codeの「計画」欄の件名一覧を読み取る。
+  function extractPlanItems() {
+    const head = Array.from(document.querySelectorAll("h2")).find((h) =>
+      ["タスク", "Tasks"].includes((h.textContent || "").trim())
+    );
+    if (!head) return null;
+    const section = head.closest("section") || head.parentElement;
+    const list = section && (section.querySelector('ul[role="list"]') || section.querySelector("ul"));
+    if (!list) return null;
+    return Array.from(list.children)
+      .filter((li) => li.tagName === "LI")
+      .map((li) => {
+        const statusEl = li.querySelector(".sr-only");
+        const status = statusEl ? (statusEl.textContent || "").trim() : "";
+        const p = li.querySelector("p");
+        let text = p ? p.textContent : (li.textContent || "").replace(status, "");
+        return { status, text: (text || "").trim() };
+      })
+      .filter((it) => it.text);
+  }
+
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.type === "cvb-set-selector") {
       // 拡張機能ページ(サイドパネル)のlocalStorageとclaude.aiページのlocalStorageは
@@ -429,6 +450,16 @@
         return true;
       }
       sendResponse({ ok: true });
+      return true;
+    }
+    if (msg.type === "cvb-extract-plan-items") {
+      // 2026-11-21追加(CVB-004): ⌨️コマンド一覧の「📥 最新の定例文・計画を読み込む」用。
+      // Claude Code画面右の「計画」欄(見出し「タスク」のsection > ul[role=list] > li)から、
+      // 件名と状態(sr-only)を読み取って返すだけ(AIへの送信は無く一瞬で終わる)。
+      // 画面の構造はユーザーが貼ったouterHTML(2026-11-21)に基づく。欄が閉じている等で
+      // 見つからない場合はok:falseを返す。
+      const items = extractPlanItems();
+      sendResponse({ ok: items !== null, items: items || [] });
       return true;
     }
     if (msg.type === "cvb-insert-text") {

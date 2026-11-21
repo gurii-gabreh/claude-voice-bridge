@@ -608,10 +608,20 @@
        したため、定例文(data/templates.json)だけを読み込むボタンをここに置いた。 -->
   <div id="top-view-commands">
     <div id="commands-load-row" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 8px;">
-      <button id="load-templates-json-btn" type="button" title="GitHub上のdata/templates.jsonから、定例文とスキル呼び出し文言を最新にします">📥 最新の定例文を読み込む</button>
+      <button id="load-templates-json-btn" type="button" title="GitHub上のdata/templates.jsonから定例文・スキル呼び出し文言を最新にし、開いているClaudeのタブの「計画」欄から件名を読み込みます">📥 最新の定例文・計画を読み込む</button>
       <span id="commands-status" style="font-size:11px;color:var(--ink-soft)"></span>
     </div>
   <div id="phrases-section">
+    <!-- 2026-11-21追加(CVB-004)、ユーザー指示「最新の定例文読み取りで、計画のタスク内容も読み込んでくれる?
+         更新時は既に取り込んでいたら一旦削除し再度取り込み」「件名だけ取り込んでほしい、クリックで入力欄に
+         タスク名を自動挿入したい」。読み込むたびに丸ごと置き換える(cvb_plan_items)。 -->
+    <details class="collapsible-block" open>
+      <summary class="collapsible-summary">📋 計画のタスク(押すと入力欄に反映、送信は自分で押す)</summary>
+      <div class="collapsible-body">
+        <div id="plan-buttons" style="display:flex;flex-direction:column;gap:6px;"></div>
+        <div id="plan-empty" style="font-size:11px;color:var(--ink-soft)">まだ読み込んでいません。Claudeのタブで右の「計画」欄を開いた状態で「📥 最新の定例文・計画を読み込む」を押してください。</div>
+      </div>
+    </details>
     <details class="collapsible-block">
       <summary class="collapsible-summary">📌 定例文(押すと入力欄に反映、送信は自分で押す)</summary>
       <div class="collapsible-body">

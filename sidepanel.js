@@ -512,7 +512,58 @@
       return false;
     }
   }
-  document.getElementById("load-templates-json-btn").addEventListener("click", loadTemplatesOnly);
+  // 2026-11-21追加(CVB-004): Claude Codeの「計画」欄の件名を読み込み、ボタンとして並べる。
+  // 読み込むたびに前回分を削除して丸ごと置き換える(ユーザー指示)。完了の項目は除く。
+  const planButtonsEl = document.getElementById("plan-buttons");
+  const planEmptyEl = document.getElementById("plan-empty");
+  function renderPlanItems(items) {
+    planButtonsEl.innerHTML = "";
+    // 完了の項目は除外する(ユーザー指示「完了は除外することできる?」)。状態の文字は
+    // 「未完了」以外に「完了」「完了済み」等の可能性があるため、「完了」を含み「未完了」ではないものを除く。
+    const isDone = (st) => /完了|completed/i.test(st || "") && !/未完了/.test(st || "");
+    const list = (items || []).filter((it) => !isDone(it.status));
+    planEmptyEl.style.display = list.length ? "none" : "block";
+    if (!list.length && items) planEmptyEl.textContent = "未完了の計画はありません(または読み取れませんでした)。";
+    list.forEach((it) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "phrase-btn";
+      btn.textContent = it.text;
+      btn.title = it.text;
+      btn.addEventListener("click", async () => {
+        const tabId = await getActiveTabId();
+        if (!tabId) { commandsStatusEl.textContent = "Claudeのタブを開いて、アクティブにしてください"; return; }
+        try {
+          const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-insert-text", text: it.text });
+          if (!res || !res.ok) commandsStatusEl.textContent = "入力欄が見つかりませんでした";
+        } catch (e) {
+          commandsStatusEl.textContent = "ページとの通信に失敗しました(ページを再読み込みしてください)";
+        }
+      });
+      planButtonsEl.appendChild(btn);
+    });
+  }
+  async function loadPlanItems() {
+    const tabId = await getActiveTabId();
+    if (!tabId) return "Claudeのタブがアクティブでないため、計画は読み込めませんでした";
+    try {
+      const res = await chrome.tabs.sendMessage(tabId, { type: "cvb-extract-plan-items" });
+      if (!res || !res.ok) return "計画の欄が見つかりませんでした(右の「計画」欄を開いてから押してください)";
+      await chrome.storage.local.remove("cvb_plan_items");
+      await chrome.storage.local.set({ cvb_plan_items: res.items });
+      renderPlanItems(res.items);
+      return `計画${planButtonsEl.children.length}件`;
+    } catch (e) {
+      return "ページとの通信に失敗しました(ページを再読み込みしてください)";
+    }
+  }
+  chrome.storage.local.get("cvb_plan_items").then((st) => { if (st && st.cvb_plan_items) renderPlanItems(st.cvb_plan_items); });
+  document.getElementById("load-templates-json-btn").addEventListener("click", async () => {
+    const okT = await loadTemplatesOnly();
+    const tMsg = commandsStatusEl.textContent;
+    const pMsg = await loadPlanItems();
+    commandsStatusEl.textContent = `${tMsg} / ${pMsg}`;
+  });
 
   loadTrackerJsonBtn.addEventListener("click", () => {
     showUpdateStep("extract");
