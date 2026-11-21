@@ -557,6 +557,21 @@
       return "ページとの通信に失敗しました(ページを再読み込みしてください)";
     }
   }
+  // 2026-11-21追加、ユーザー選択「最後の状態を覚える」: ⌨️コマンド一覧タブ内の折りたたみ
+  // (📋計画のタスク・📌定例文・🔧スキル呼び出し文言)の開閉状態を保存し、次回開いた時に復元する。
+  (async () => {
+    const blocks = Array.from(document.querySelectorAll("#top-view-commands details.collapsible-block"));
+    let saved = {};
+    try { saved = (await chrome.storage.local.get("cvb_commands_open")).cvb_commands_open || {}; } catch (e) {}
+    blocks.forEach((d, i) => {
+      const key = d.id || `block${i}`;
+      if (key in saved) d.open = !!saved[key];
+      d.addEventListener("toggle", () => {
+        saved[key] = d.open;
+        chrome.storage.local.set({ cvb_commands_open: saved }).catch(() => {});
+      });
+    });
+  })();
   chrome.storage.local.get("cvb_plan_items").then((st) => { if (st && st.cvb_plan_items) renderPlanItems(st.cvb_plan_items); });
   document.getElementById("load-templates-json-btn").addEventListener("click", async () => {
     const okT = await loadTemplatesOnly();
