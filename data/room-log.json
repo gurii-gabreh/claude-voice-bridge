@@ -107,6 +107,51 @@
       "title": "Claude Code",
       "ts": 1790409312253,
       "url": "https://claude.ai/code/session_019rBhvzqA7o5g8MjBA6dyCg?artifact=ed9f96bd-7063-4daa-9d57-fe1105471262"
+    },
+    {
+      "id": 13,
+      "mode": "",
+      "source": "passive",
+      "text": "【回答11/22 02:05:00】いつもの形で、English-Speaking-Appのレッスン記録に追加して、mainに反映しました(e72778e)。記録一覧のページ(lessons.html)を、PC幅とスマホ幅の両方で開いて確認しました。11/22の記録が表示され、エラーはありませんでした。記録した内容日付・教材: 2026-11-22/初級英会話・基本フレーズ練習「Daily English Practice and Future Plans」(講師Alex、約25分)表現(5件):I want to keep going with this lesson.This lesson feels too short. I want it longer.Has it already been fifteen minutes?I will go home after the theater.If I miss it, I’ll be in trouble. So I need to go to bed soon.訂正(5件): an little→a little/I sleepy→I’m sleepy/want be→want to be/If miss→If I miss/need to be go→need to goレポートには訂正が7件ありました。残りの2件(sleeping/sleepy の使い分け、I will/I’ll の違い)は文法の誤りではないので、訂正欄には入れていません。どちらもレポート原文には残っています。宿題: 次回の復習ポイントの4文レポート原文: 全文をそのまま保存しました提案レポートの「5. レッスンの進め方についての要望」(1回15分を基本にする/毎回「続けますか?」と確認しない、など)は、ChatGPT側の恒久的な設定に入れないと、次回以降は反映されません。アプリにChatGPT用の指示文のページ(chatgpt.html)があるので、そこに入れておくこともできます。必要なら言ってください。",
+      "title": "Claude Code",
+      "ts": 1795314740760,
+      "url": "https://claude.ai/code/session_011sXeDjZZ88m9HVDEfBSR6i"
+    },
+    {
+      "id": 14,
+      "mode": "",
+      "source": "passive",
+      "text": "処理を4つに分け、Claude側の音声機能とClaude.aiとClaude Codeの連携はサブエージェントに、Apple側はCodexに任せ、既存の仕組みの確認は私が直接行います。",
+      "title": "Claude Code",
+      "ts": 1795315346499,
+      "url": "https://claude.ai/code/session_011sXeDjZZ88m9HVDEfBSR6i"
+    },
+    {
+      "id": 15,
+      "mode": "",
+      "source": "passive",
+      "text": "chatgpt.htmlの要望5つのうち4つはそのまま追加できますが、「1レッスン15分を基本」だけは今の指示文(■3)と矛盾するため、確認してから扱います。",
+      "title": "Claude Code",
+      "ts": 1795315391819,
+      "url": "https://claude.ai/code/session_011sXeDjZZ88m9HVDEfBSR6i"
+    },
+    {
+      "id": 16,
+      "mode": "",
+      "source": "passive",
+      "text": "chatgpt.htmlの要望5つのうち4つはそのまま追加できますが、「1レッスン15分を基本」だけは今の指示文(■3)と矛盾するため、確認してから扱います。\nThe user replied with a message instead of choosing an option. I’ll wait for that message.\n【回答11/22 11:50:30】計画#66の2件(CVB-004:計画の件名読み込みと折りたたみの保存、PTD-148:sysIdの重複を自動で1件にまとめる)を完了にしました。tasks.jsonへの完了の記録とcredit-logへの追記は、今夜0:05の自動処理で行います。未解決英会話の指示文の件(計画#67)。「1レッスン15分を基本にする」の扱いだけ決めてください。番号で答えてもらえれば大丈夫です。台本を使わない練習だけ15分にする(おすすめ。台本レッスンは今の長さのまま)すべてのレッスンを15分にする15分の要望は入れない残りの4つ(数文で終わらせない/何度も確認しない/答えたら自然に次へ/終わりは自分で言う)は、返事をもらえたらまとめて追加します。音声で開発できる環境の相談は、いま調査中です。3つの調査が同時に動いていて、結果がそろったら報告します。\n【回答11/22 11:53:10】IDはすべての項目に付いているわけではありません。計画の件名は「【ステータス】【アプリ名】【タスクID】要件」の形にしていますが、いま残っている項目の半分ほどは 【ID未採番】 です。相談の段階でまだtasks.jsonのタスクになっていないもの、たとえば #11 Anthropic News や #46 週次ルームの作り直しなどは、IDが決まっていません。11/21に決めた書式で、IDが無いものは【ID未採番】と書くことにしていたためです。並べ替え自体はできます。サイドアプリは計画の件名を文字として読み込んでいるので、件名の3つ目の【 】(タスクID)を取り出して並べ替えられます。案は次のとおりです。案並び方A(おすすめ)タスクID順。アプリの接頭字(AIL→CVB→PTD…)ごとにまとめて番号順。【ID未採番】は最後にまとめるBステータス順(相談→承認待ち→あなたの作業→あなたの確認→確認待ち→保留)。同じステータスの中はタスクID順CAとBを切り替えるボタンを付ける懸念点一覧の半分ほどが【ID未採番】なので、Aだけだと最後の固まりが大きくなります。「自分が答えるべきもの」を探すなら、Bのほうが探しやすいかもしれません。計画の件名を書き換えるたびに、サイドアプリで「📥 最新の定例文・計画を読み込む」を押し直す必要があります。これは今と変わりません。どの案で進めるか教えてください。決まったら、サイドアプリ(claude-voice-bridge)を改修して動作確認まで行います。未解決英会話の指示文(計画#67):「15分を基本」の扱いを、1・2・3のどれにするか。音声で開発する環境の相談:いま調査中です。\n既存の仕組みを確認しました(調査D)。Claude側の音声機能の調査(調査A)も結果が出ています。残りのApple側(Codex)と、Claude.aiとClaude Codeの連携(調査C)の結果を待っています。",
+      "title": "Claude Code",
+      "ts": 1795315471127,
+      "url": "https://claude.ai/code/session_011sXeDjZZ88m9HVDEfBSR6i"
+    },
+    {
+      "id": 17,
+      "mode": "",
+      "source": "passive",
+      "text": "【あなたの確認】【claude-voice-bridge・servicenow-sub-agent】【CVB-004・PTD-148】完了にしてよいか\n【あなたの確認】【English-Speaking-App】【ID未採番】ChatGPT指示文を15分(トピック10+フリー5)+進め方4点に更新済み、完了でよいか\n【保留】【Claude運用全般】【ID未採番】音声中心の開発環境: 調査済み、実機検証は後日(推奨は案1)\n【確認待ち】【claude-voice-bridge】【CVB-006】計画のタスクをステータス順→ID順に並べ替え、拡張機能の更新後に確認\n【相談】【progress-tracker-dashboard】【ID未採番】どのAIでもGitHubで内容・経緯・状態・課題が分かる仕組み(課題の一本化案の承認)",
+      "title": "Claude Code",
+      "ts": 1795318003442,
+      "url": "https://claude.ai/code/session_011sXeDjZZ88m9HVDEfBSR6i"
     }
   ]
 }
