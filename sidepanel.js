@@ -516,12 +516,36 @@
   // 読み込むたびに前回分を削除して丸ごと置き換える(ユーザー指示)。完了の項目は除く。
   const planButtonsEl = document.getElementById("plan-buttons");
   const planEmptyEl = document.getElementById("plan-empty");
+  // 2026-11-22追加、ユーザー指示「ステータス順でまとめてから、タスクID順で」: 件名は
+  // 「【ステータス】【アプリ名】【タスクID】要件」の書式(claude-core-rules.mdルール14の4)。
+  // 1つ目の【】でステータス順にまとめ、同じステータス内は3つ目の【】のタスクID順
+  // (接頭字のアルファベット順→番号順、【ID未採番】や書式外は最後)。同順位は元の並びを保つ。
+  const PLAN_STATUS_ORDER = ["相談", "承認待ち", "あなたの作業", "あなたの確認", "確認待ち", "保留"];
+  function parsePlanSubject(text) {
+    const tags = (String(text || "").match(/【[^】]*】/g) || []).map((s) => s.slice(1, -1));
+    const status = tags[0] || "";
+    const st = PLAN_STATUS_ORDER.indexOf(status);
+    const idm = /([A-Za-z]+)-(\d+)/.exec(tags[2] || "");
+    return { statusRank: st === -1 ? PLAN_STATUS_ORDER.length : st, prefix: idm ? idm[1].toUpperCase() : null, num: idm ? Number(idm[2]) : 0 };
+  }
+  function sortPlanItems(list) {
+    return list
+      .map((it, i) => ({ it, i, k: parsePlanSubject(it.text) }))
+      .sort((a, b) => {
+        if (a.k.statusRank !== b.k.statusRank) return a.k.statusRank - b.k.statusRank;
+        if (!a.k.prefix !== !b.k.prefix) return a.k.prefix ? -1 : 1;
+        if (a.k.prefix && b.k.prefix && a.k.prefix !== b.k.prefix) return a.k.prefix < b.k.prefix ? -1 : 1;
+        if (a.k.num !== b.k.num) return a.k.num - b.k.num;
+        return a.i - b.i;
+      })
+      .map((x) => x.it);
+  }
   function renderPlanItems(items) {
     planButtonsEl.innerHTML = "";
     // 完了の項目は除外する(ユーザー指示「完了は除外することできる?」)。状態の文字は
     // 「未完了」以外に「完了」「完了済み」等の可能性があるため、「完了」を含み「未完了」ではないものを除く。
     const isDone = (st) => /完了|completed/i.test(st || "") && !/未完了/.test(st || "");
-    const list = (items || []).filter((it) => !isDone(it.status));
+    const list = sortPlanItems((items || []).filter((it) => !isDone(it.status)));
     planEmptyEl.style.display = list.length ? "none" : "block";
     if (!list.length && items) planEmptyEl.textContent = "未完了の計画はありません(または読み取れませんでした)。";
     list.forEach((it) => {
