@@ -64,6 +64,13 @@
       "generatedAt": "2026-11-28T15:07:07Z",
       "summary": "未回答のまま残っている相談: 計画#11・#17・#19・#20・#30・#31・#46(複数回にわたり「まだ回答をいただいていません」と明記)。計画#71(PTD-149、ai-research-radarのGemini用GASトリガーを止めたか、gemini-monitorのシートも止めるか、ルール13のGemini系URLを外すか)の3点確認依頼。English-Speaking-AppのChatGPT指示文更新(15分化+進め方4点)が完了でよいかの確認待ち。CVB-006(計画タスクのステータス順→ID順並べ替え)も拡張機能改修後の確認待ちのまま。着手済みだが完了が明言されていない作業: PTD-151(ChatGPT音声で要件定義→Claude Codeで実装する仕組み)は、ルール34追加・data/inbox/運用・0:05定期取り込み処理まで実装済みだが、ChatGPTのProject作成・試用はユーザー側の作業中(最新entryでも「作って試す」の段階)で完了報告はまだ無い。「音声中心の開発環境」は保留(調査済み、実機検証は後日、推奨は案1)。繰り返し話題に出ている関心事: CodexやChatGPT等の他AIとClaude Code間の音声開発連携・引き継ぎフローの構築、CLAUDE.mdルール配布の仕組み(CROSS_REPO_PAT鍵の期限切れで他リポジトリへルール19以降が届いていない、#14・#65として長期残件)、progress-tracker-dashboardのCLAUDE.mdに残る古いworker-room記述の整理未着手。",
       "sourceCount": 8
+    },
+    {
+      "periodFrom": "2026-11-23T14:24:45.423Z",
+      "periodTo": "2026-11-23T14:24:45.423Z",
+      "generatedAt": "2026-11-28T15:08:20Z",
+      "summary": "(この期間は対象データなし)",
+      "sourceCount": 0
     }
   ]
 }
